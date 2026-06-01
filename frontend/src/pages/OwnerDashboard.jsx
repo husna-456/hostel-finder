@@ -1,86 +1,105 @@
+import { useState, useEffect } from "react";
+import { fetchClient } from "../api/fetchClient";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import PendingPayments from "../components/PendingPayments";
 
-const bookings = [
-  { initials: "AJ", name: "Alex Johnson",  hostel: "Skyline Residence",  checkIn: "Sept 12, 2023", status: "Pending" },
-  { initials: "SC", name: "Sarah Chen",    hostel: "Lavender Heights",   checkIn: "Sept 10, 2023", status: "Confirmed" },
-  { initials: "MT", name: "Mark Taylor",   hostel: "The Urban Nest",     checkIn: "Sept 15, 2023", status: "Pending" },
-];
-
-const statusStyle = (status) =>
-  status === "Confirmed"
-    ? "bg-green-100 text-green-700"
-    : "bg-yellow-100 text-yellow-700";
-
 export default function OwnerDashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchClient("/dashboard/owner")
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const { stats = {}, recentBookings = [], chartData = [], hostelStats = [] } = data || {};
+
+  const statCards = [
+    { label: "My Hostels",   value: stats.totalHostels  || 0, color: "bg-purple-500" },
+    { label: "Total Bookings",value: stats.totalBookings || 0, color: "bg-blue-500" },
+    { label: "Pending",       value: stats.pending       || 0, color: "bg-amber-500" },
+    { label: "Accepted",      value: stats.accepted      || 0, color: "bg-green-500" },
+    { label: "Reserved",      value: stats.reserved      || 0, color: "bg-emerald-500" },
+    { label: "Revenue (PKR)", value: `${(stats.revenue || 0).toLocaleString()}`, color: "bg-indigo-500" },
+  ];
+
+  const statusStyle = (s) =>
+    s === "accepted" || s === "reserved" ? "bg-green-100 text-green-700" :
+    s === "pending"  ? "bg-amber-100 text-amber-700" :
+    s === "rejected" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8 font-sans">
-
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard Overview</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Welcome back. Here's what's happening today.</p>
+      <div className="mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard Overview</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Here's what's happening with your properties today.</p>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {statCards.map((s) => (
+          <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div className={`w-8 h-8 ${s.color} rounded-lg mb-2`} />
+            <p className="text-2xl font-bold text-gray-800">{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Chart + Hostel Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Monthly Bookings Chart */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Monthly Bookings</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }} />
+              <Bar dataKey="bookings" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Top Hostels by Bookings */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Hostels by Bookings</h3>
+          {hostelStats.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">No hostel data yet</p>
+          ) : (
+            <div className="space-y-3">
+              {hostelStats.slice(0, 5).map((h) => (
+                <div key={h.name}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-700 font-medium truncate">{h.name}</span>
+                    <span className="text-purple-600 font-bold ml-2">{h.bookings}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (h.bookings / (hostelStats[0]?.bookings || 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {/* Total Bookings */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">+12% vs last month</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-800">1,284</p>
-          <p className="text-sm text-gray-500 mt-1">Total Bookings</p>
-        </div>
-
-        {/* Active Listings */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </div>
-            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">3 New Units</span>
-          </div>
-          <p className="text-3xl font-bold text-gray-800">42</p>
-          <p className="text-sm text-gray-500 mt-1">Active Listings</p>
-          <div className="mt-3">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Occupancy Rate</span>
-              <span>85%</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
-              <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: "85%" }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Premium Status */}
-        <div className="bg-purple-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500 rounded-full -translate-y-8 translate-x-8 opacity-50" />
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <span className="text-xs font-semibold uppercase tracking-wider text-purple-200">Premium Status</span>
-            </div>
-            <h3 className="text-base font-bold mb-1">Property of the Month</h3>
-            <p className="text-sm text-purple-200 leading-relaxed">
-              Your hostel has been ranked #1 for student satisfaction.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Booking Requests */}
+      {/* Recent Bookings */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-100">
           <h3 className="text-base font-semibold text-gray-800">Recent Booking Requests</h3>
@@ -92,25 +111,25 @@ export default function OwnerDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider">
-                <th className="px-6 py-3 text-left">Student</th>
+                <th className="px-6 py-3 text-left">Guest</th>
                 <th className="px-6 py-3 text-left">Hostel</th>
-                <th className="px-6 py-3 text-left">Check In</th>
+                <th className="px-6 py-3 text-left">Date</th>
                 <th className="px-6 py-3 text-left">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {bookings.map((b, i) => (
-                <tr key={i} className="hover:bg-gray-50 transition">
+              {recentBookings.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-8 text-gray-400">No bookings yet</td></tr>
+              ) : recentBookings.map((b) => (
+                <tr key={b._id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold shrink-0">
-                        {b.initials}
-                      </div>
-                      <span className="font-medium text-gray-700">{b.name}</span>
-                    </div>
+                    <p className="font-medium text-gray-800">{b.userId?.name || b.name || "—"}</p>
+                    <p className="text-xs text-gray-400">{b.userId?.email || b.email || ""}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-500">{b.hostel}</td>
-                  <td className="px-6 py-4 text-gray-500">{b.checkIn}</td>
+                  <td className="px-6 py-4 text-gray-600">{b.hostelId?.name || "—"}</td>
+                  <td className="px-6 py-4 text-gray-500 text-xs">
+                    {new Date(b.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle(b.status)}`}>
                       {b.status}
@@ -124,16 +143,11 @@ export default function OwnerDashboard() {
 
         {/* Mobile cards */}
         <div className="md:hidden divide-y divide-gray-50">
-          {bookings.map((b, i) => (
-            <div key={i} className="px-4 py-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold shrink-0">
-                  {b.initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-800 text-sm truncate">{b.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{b.hostel} · {b.checkIn}</p>
-                </div>
+          {recentBookings.map((b) => (
+            <div key={b._id} className="px-4 py-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium text-gray-800 text-sm truncate">{b.userId?.name || b.name || "—"}</p>
+                <p className="text-xs text-gray-400 truncate">{b.hostelId?.name || "—"}</p>
               </div>
               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${statusStyle(b.status)}`}>
                 {b.status}
@@ -143,7 +157,7 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      {/* Pending Payment Verifications */}
+      {/* Pending Payments */}
       <PendingPayments />
     </div>
   );

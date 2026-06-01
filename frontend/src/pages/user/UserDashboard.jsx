@@ -48,40 +48,18 @@ export default function UserDashboard() {
       try {
         setLoading(true);
 
-        const [userRes, bookingsRes] = await Promise.allSettled([
-          fetchClient("/auth/dashboard"),
-          fetchClient("/bookings/user"),
-        ]);
+        const data = await fetchClient("/dashboard/user");
 
-        if (userRes.status === "fulfilled") {
-          const name = userRes.value?.user?.name || "User";
-          setUserName(name);
-          setUserInitial(name.charAt(0).toUpperCase());
-        }
-
-        if (bookingsRes.status === "fulfilled") {
-          const bks = bookingsRes.value || [];
-          const active = bks.filter((b) => b.status === "accepted" || b.status === "reserved").length;
-          const pending = bks.filter((b) => b.status === "pending").length;
-          setStats({ activeStays: active, pending, messages: 0 });
-          setRecentBookings(bks.slice(0, 4));
-
-          // Build last-6-months chart from real data
-          const monthMap = {};
-          bks.forEach((b) => {
-            const d = new Date(b.createdAt);
-            const key = d.toLocaleString("en-US", { month: "short" });
-            monthMap[key] = (monthMap[key] || 0) + 1;
-          });
-          const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-          const now = new Date();
-          const last6 = Array.from({ length: 6 }, (_, i) => {
-            const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-            const label = d.toLocaleString("en-US", { month: "short" });
-            return { month: label, bookings: monthMap[label] || 0 };
-          });
-          setChartData(last6);
-        }
+        const name = data.user?.name || "User";
+        setUserName(name);
+        setUserInitial(name.charAt(0).toUpperCase());
+        setStats({
+          activeStays: data.stats?.accepted || 0,
+          pending:     data.stats?.pending  || 0,
+          messages:    0,
+        });
+        setRecentBookings(data.recentBookings || []);
+        setChartData(data.chartData || []);
       } catch (err) {
         console.error("Dashboard load error:", err);
       } finally {
