@@ -25,9 +25,23 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://hostel-finder-tan.vercel.app",
+  process.env.CORS_ORIGIN,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [process.env.CORS_ORIGIN || "http://localhost:5173", "http://localhost:5174"],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`));
+      }
+    },
     credentials: true,
   })
 );
