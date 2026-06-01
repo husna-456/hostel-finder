@@ -87,8 +87,7 @@ if (password !== confirmPassword) {
 // ✅ LOGIN
 export const login = async (req, res) => {
     try {
-        const { email,password, role } = req.body;
-console.log("Login Request:", req.body);
+        const { email, password, role } = req.body;
 
 
         // Check if email, password, role are provided

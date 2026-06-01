@@ -2,7 +2,6 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Resend SMTP — works from Railway/cloud (no port blocking)
 const transporter = nodemailer.createTransport({
   host: "smtp.resend.com",
   port: 465,
@@ -16,12 +15,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify((error) => {
-  if (error) {
-    console.error("❌ Email transporter error:", error.message);
-  } else {
-    console.log("✅ Email transporter ready");
-  }
-});
+// Non-crashing verify — just logs the result
+transporter.verify()
+  .then(() => console.log("✅ Email transporter ready"))
+  .catch((err) => console.warn("⚠️ Email not configured:", err.message));
 
 export default transporter;
