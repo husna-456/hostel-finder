@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
     "seed": "node seed.js",
-    "start": "node hostelsCoordinates.js"
+    "coordinates": "node hostelsCoordinates.js",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
