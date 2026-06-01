@@ -2,54 +2,58 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Brevo HTTP API — no SMTP, no port blocking, send to ANY email free
-const sendBrevoEmail = async ({ to, subject, html, from }) => {
-  if (!process.env.BREVO_API_KEY) {
-    console.warn("⚠️ BREVO_API_KEY not set — email skipped");
-    return;
-  }
-
-  const toAddress = typeof to === "string" ? [{ email: to }] : to.map((e) => ({ email: e }));
-
-  try {
-    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "api-key": process.env.BREVO_API_KEY,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        sender: {
-          name: "Hostel Finder",
-          email: process.env.EMAIL || "husnazaheer518@gmail.com",
-        },
-        to: toAddress,
-        subject,
-        htmlContent: html,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      console.error("❌ Brevo email error:", err.message || JSON.stringify(err));
-    } else {
-      console.log("✅ Email sent to:", to);
-    }
-  } catch (err) {
-    console.error("❌ Brevo fetch error:", err.message);
-  }
-};
-
-// Drop-in replacement — same sendMail() interface as nodemailer
+// Mailjet HTTP API — free 200/day, no domain needed, works from Railway
 const transporter = {
-  sendMail: sendBrevoEmail,
+  sendMail: async ({ to, subject, html }) => {
+    if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
+      console.warn("⚠️ Mailjet keys not set — email skipped");
+      return;
+    }
+
+    const toAddress = typeof to === "string" ? [{ Email: to }] : to.map((e) => ({ Email: e }));
+
+    try {
+      const res = await fetch("https://api.mailjet.com/v3.1/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`
+            ).toString("base64"),
+        },
+        body: JSON.stringify({
+          Messages: [
+            {
+              From: {
+                Email: process.env.EMAIL || "husnazaheer518@gmail.com",
+                Name: "Hostel Finder",
+              },
+              To: toAddress,
+              Subject: subject,
+              HTMLPart: html,
+            },
+          ],
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.Messages?.[0]?.Status !== "success") {
+        console.error("❌ Mailjet error:", JSON.stringify(data));
+      } else {
+        console.log("✅ Email sent to:", to);
+      }
+    } catch (err) {
+      console.error("❌ Mailjet fetch error:", err.message);
+    }
+  },
 };
 
 console.log(
-  process.env.BREVO_API_KEY
-    ? "✅ Brevo email ready"
-    : "⚠️ BREVO_API_KEY missing — emails disabled"
+  process.env.MAILJET_API_KEY
+    ? "✅ Mailjet email ready"
+    : "⚠️ Mailjet keys missing — emails disabled"
 );
 
 export default transporter;
