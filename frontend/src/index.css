@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+/* Super thin scrollbar – size chhota karne ke liye */
+/* WhatsApp Web jaisi chhoti scrollbar – size bohot kam */
+.scrollbar-whatsapp {
+  overflow-y: auto;
+}
+
+/* Chrome, Edge, Safari (Yahan size control hota hai) */
+.scrollbar-whatsapp::-webkit-scrollbar {
+  width: 5px;  /* WhatsApp jaisa chhota – 4px ya 5px best hai, agar bohot chhota chahiye to 3px try karo */
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar-track {
+  background: transparent;  /* track bilkul gayab */
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar-thumb {
+  background-color: transparent;  /* normally invisible – yeh chhoti feel deta hai */
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
+}
+
+/* Hover pe dikhe – WhatsApp style */
+.scrollbar-whatsapp:hover::-webkit-scrollbar-thumb {
+  background-color: #aeaeae;  /* light gray, WhatsApp jaisa */
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar-thumb:hover {
+  background-color: #999;  /* hover pe dark */
+}
+
+/* Firefox ke liye (thin hi sabse chhota option hai) */
+.scrollbar-whatsapp {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;  /* normally transparent */
+}
+
+/* Hover pe Firefox mein bhi color (optional) */
+.scrollbar-whatsapp:hover {
+  scrollbar-color: #aeaeae transparent;
+}
+
+
+
+/* Slide-up animation */
+@keyframes slide-up {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.7;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 3s ease-in-out infinite;
+}
