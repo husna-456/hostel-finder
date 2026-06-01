@@ -30,9 +30,15 @@ const transporter = {
                 Email: process.env.EMAIL || "husnazaheer518@gmail.com",
                 Name: "Hostel Finder",
               },
+              ReplyTo: {
+                Email: process.env.EMAIL || "husnazaheer518@gmail.com",
+              },
               To: toAddress,
               Subject: subject,
               HTMLPart: html,
+              Headers: {
+                "X-Mailjet-Campaign": "hostel-finder-transactional",
+              },
             },
           ],
         }),
