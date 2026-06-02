@@ -84,7 +84,8 @@ const HostelSchema = new mongoose.Schema({
     required: true
   },
 
-  isSample: { type: Boolean, default: false }
+  isSample:  { type: Boolean, default: false },
+  isBlocked: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Pre-save hook
