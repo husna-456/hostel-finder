@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import { MdSpaceDashboard } from "react-icons/md";
 import { FaPlusCircle, FaBook, FaList, FaSignOutAlt, FaComment, FaUserEdit, FaChevronUp } from "react-icons/fa";
@@ -8,22 +9,32 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+  const [menuPos, setMenuPos] = useState({ bottom: 0, left: 0, width: 180 });
+  const profileBtnRef = useRef(null);
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user    = JSON.parse(localStorage.getItem("user") || "{}");
   const name    = user?.name  || "Owner";
   const email   = user?.email || "";
   const initial = name.charAt(0).toUpperCase();
 
+  // Close dropdown on any scroll
   useEffect(() => {
-    function onOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
+    const close = () => setShowDropdown(false);
+    window.addEventListener("scroll", close, true);
+    return () => window.removeEventListener("scroll", close, true);
   }, []);
+
+  const openDropdown = () => {
+    if (profileBtnRef.current) {
+      const rect = profileBtnRef.current.getBoundingClientRect();
+      setMenuPos({
+        bottom: window.innerHeight - rect.top + 8,
+        left:   rect.left,
+        width:  Math.max(rect.width, 180),
+      });
+    }
+    setShowDropdown(p => !p);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -77,22 +88,18 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
               <MdSpaceDashboard className="text-2xl shrink-0" />
               {isOpen && <span>Dashboard</span>}
             </NavLink>
-
             <NavLink to="/hostel_owner/add-hostel" className={linkClass} onClick={handleNavClick}>
               <FaPlusCircle className="text-2xl shrink-0" />
               {isOpen && <span>Add Hostel</span>}
             </NavLink>
-
             <NavLink to="/hostel_owner/bookings" className={linkClass} onClick={handleNavClick}>
               <FaBook className="text-2xl shrink-0" />
               {isOpen && <span>Bookings</span>}
             </NavLink>
-
             <NavLink to="/hostel_owner/hostels" className={linkClass} onClick={handleNavClick}>
               <FaList className="text-2xl shrink-0" />
               {isOpen && <span>Hostel Listing</span>}
             </NavLink>
-
             <NavLink to="/hostel_owner/chat" className={linkClass} onClick={handleNavClick}>
               <FaComment className="text-2xl shrink-0" />
               {isOpen && <span>Chat</span>}
@@ -100,34 +107,12 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
           </nav>
         </div>
 
-        {/* Bottom profile section */}
-        <div className="relative border-t p-3" ref={dropdownRef}>
-
-          {/* Upward dropdown */}
-          {showDropdown && (
-            <div className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-              <button
-                onClick={() => { setShowDropdown(false); handleNavClick(); navigate("/hostel_owner/profile"); }}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
-              >
-                <FaUserEdit className="text-purple-500" />
-                Edit Profile
-              </button>
-              <div className="border-t border-gray-100" />
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <FaSignOutAlt />
-                Logout
-              </button>
-            </div>
-          )}
-
-          {/* Profile trigger button */}
+        {/* Profile trigger — no relative container needed, portal handles positioning */}
+        <div className="border-t p-3">
           <button
-            onClick={() => setShowDropdown(p => !p)}
-            className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition group"
+            ref={profileBtnRef}
+            onClick={openDropdown}
+            className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition"
           >
             <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
               {initial}
@@ -146,6 +131,32 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
           </button>
         </div>
       </aside>
+
+      {/* Dropdown rendered via portal — escapes sidebar overflow clipping */}
+      {showDropdown && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setShowDropdown(false)} />
+          <div
+            className="fixed z-[9999] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+            style={{ bottom: menuPos.bottom, left: menuPos.left, width: menuPos.width, minWidth: 180 }}
+          >
+            <button
+              onClick={() => { setShowDropdown(false); handleNavClick(); navigate("/hostel_owner/profile"); }}
+              className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+            >
+              <FaUserEdit className="text-purple-500" /> Edit Profile
+            </button>
+            <div className="border-t border-gray-100" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
     </>
   );
 }
