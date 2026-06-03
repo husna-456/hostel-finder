@@ -2,7 +2,7 @@ import SearchBox from "./SearchBox";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const CITIES = ["Rawalpindi", "Islamabad", "Lahore", "Karachi", "Peshawar", "Multan"];
+const CITIES = ["Satellite Town", "Model Town", "G.T Road", "Peoples Colony", "Wapda Town", "Rahwali", "Canal Road", "Officer Colony", "Civil Lines", "Gujranwala Cantonment", "Defence Road", "Shaheenabad", "Gulshan Iqbal", "Nawan Pind", "Gondlanwala Road"];
 
 export default function HeroSection({ onSearch, bannerImage }) {
   const bgImage = bannerImage || "/banner.jpg";
@@ -44,28 +44,13 @@ export default function HeroSection({ onSearch, bannerImage }) {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="text-5xl md:text-7xl font-extrabold leading-[1.08] tracking-tight mb-3"
+              className="text-3xl md:text-5xl lg:text-7xl font-extrabold leading-[1.08] tracking-tight mb-3"
             >
               Find Your{" "}
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-purple-400 bg-clip-text text-transparent">
                   Perfect Hostel
                 </span>
-                <motion.svg
-                  className="absolute -bottom-2 left-0 w-full"
-                  viewBox="0 0 300 12"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.7 }}
-                >
-                  <motion.path
-                    d="M0 8 Q75 2 150 8 Q225 14 300 8"
-                    fill="none"
-                    stroke="#a855f7"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                </motion.svg>
               </span>
             </motion.h1>
 
@@ -76,7 +61,7 @@ export default function HeroSection({ onSearch, bannerImage }) {
               transition={{ delay: 0.5 }}
               className="flex items-center justify-center gap-2 mb-10 mt-4"
             >
-              <span className="text-white/60 text-lg">Near</span>
+              <span className="text-white/60 text-lg">Gujranwala:</span>
               <div className="overflow-hidden h-8 flex items-center">
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -91,7 +76,6 @@ export default function HeroSection({ onSearch, bannerImage }) {
                   </motion.span>
                 </AnimatePresence>
               </div>
-              <span className="text-white/60 text-lg">& more cities</span>
             </motion.div>
 
             {/* SearchBox */}
@@ -109,7 +93,7 @@ export default function HeroSection({ onSearch, bannerImage }) {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1 }}
-              className="flex items-center justify-center gap-10 mt-10 flex-wrap"
+              className="flex items-center justify-center gap-5 md:gap-10 mt-10 flex-wrap"
             >
               {[["500+", "Hostels"], ["10K+", "Students Placed"], ["50+", "Cities Covered"]].map(([num, lbl]) => (
                 <div key={lbl} className="text-center">
