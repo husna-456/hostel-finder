@@ -215,8 +215,12 @@ export const getSingleBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Populate hostelId with every field PaymentPage needs:
+    // - name, jazzCashNumber, easypaisaNumber, contact  → for display + manual payment
+    // - rooms                                           → for advance amount lookup
+    // - images, startingRent                            → for booking summary display
     const booking = await Booking.findById(id)
-      .populate("hostelId", "name jazzCashNumber easypaisaNumber contact")
+      .populate("hostelId", "name jazzCashNumber easypaisaNumber contact rooms images startingRent")
       .populate("userId", "name email")
       .lean();
 
@@ -224,17 +228,15 @@ export const getSingleBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+    // Resolve room details directly from the now-populated hostelId.rooms
     let roomDetails = null;
     let roomAdvanceAmount = null;
     let roomSeatPrice = null;
 
-    if (booking.hostelId && booking.roomId) {
-      const hostel = await Hostel.findById(booking.hostelId._id).lean();
-      if (hostel?.rooms) {
-        roomDetails = hostel.rooms.find((room) => room.roomId === booking.roomId) || null;
-        roomAdvanceAmount = roomDetails?.advanceAmount ?? null;
-        roomSeatPrice = roomDetails?.seatPrice ?? null;
-      }
+    if (booking.hostelId?.rooms && booking.roomId) {
+      roomDetails = booking.hostelId.rooms.find((r) => r.roomId === booking.roomId) || null;
+      roomAdvanceAmount = roomDetails?.advanceAmount ?? null;
+      roomSeatPrice     = roomDetails?.seatPrice     ?? null;
     }
 
     res.status(200).json({
@@ -242,7 +244,7 @@ export const getSingleBooking = async (req, res) => {
       roomDetails,
       roomAdvanceAmount,
       roomSeatPrice,
-      roomType: booking.roomType || roomDetails?.type || roomDetails?.name || null
+      roomType: booking.roomType || roomDetails?.type || roomDetails?.name || null,
     });
 
   } catch (err) {

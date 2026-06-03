@@ -351,8 +351,8 @@ export default function PaymentPage() {
                   <p className="text-xs text-gray-500 mb-1">Send payment to:</p>
                   <p className="text-lg md:text-xl font-bold text-gray-800 break-all">
                     {manualMethod === "jazzcash"
-                      ? hostel?.jazzCashNumber || payment?.bookingId?.hostelId?.jazzCashNumber || "Not provided"
-                      : hostel?.easypaisaNumber || payment?.bookingId?.hostelId?.easypaisaNumber || "Not provided"}
+                      ? booking?.hostelId?.jazzCashNumber || hostel?.jazzCashNumber || "Not provided"
+                      : booking?.hostelId?.easypaisaNumber || hostel?.easypaisaNumber || "Not provided"}
                   </p>
                 </div>
 
