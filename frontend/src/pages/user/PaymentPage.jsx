@@ -70,8 +70,7 @@ export default function PaymentPage() {
   };
 
   const handleCardSuccess = () => {
-    setPaymentDone(true);
-    toast.success("Booking confirmed successfully!");
+    navigate("/user/payment-success?type=card");
   };
 
   const handleReceiptUpload = (e) => {
@@ -102,8 +101,7 @@ export default function PaymentPage() {
         .getPublicUrl(fileName);
 
       await submitManualPayment(bookingId, manualMethod, data.publicUrl, transactionRef);
-      toast.success("Payment submitted, waiting for owner verification");
-      loadPaymentData();
+      navigate("/user/payment-success?type=manual");
     } catch (err) {
       toast.error(err.message || "Failed to submit payment");
     } finally {

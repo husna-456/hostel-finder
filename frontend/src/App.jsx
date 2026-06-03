@@ -53,6 +53,7 @@ import MyBookings from "./pages/user/MyBookings";
 import MessagesPage from "./pages/user/MessagesPage";
 import PaymentPage from "./pages/user/PaymentPage";
 import PaymentsPage from "./pages/user/PaymentsPage";
+import PaymentSuccessPage from "./pages/user/PaymentSuccessPage";
 
 // ✅ Public Hostel Pages
 import AllHostels from "./pages/AllHostels";
@@ -227,6 +228,7 @@ function App() {
             <Route path="book-hostel" element={<BookHostel />} />
             <Route path="my-bookings" element={<MyBookings />} />
             <Route path="payment/:bookingId" element={<PaymentPage />} />
+            <Route path="payment-success" element={<PaymentSuccessPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="messages/:hostelId/:ownerId" element={<MessagesPage />} />
           </Route>
