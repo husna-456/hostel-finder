@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { fetchClient } from "../api/fetchClient";
 import { FaEdit, FaTrash, FaHome, FaBed, FaMapMarkerAlt, FaPlus } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -209,12 +210,12 @@ export default function OwnerHostelListing() {
               {hostels.length} hostel{hostels.length !== 1 ? "s" : ""} listed
             </p>
           </div>
-          <a
-            href="/hostel_owner/add-hostel"
+          <Link
+            to="/hostel_owner/add-hostel"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition w-full sm:w-auto justify-center"
           >
             <FaPlus /> Add New Hostel
-          </a>
+          </Link>
         </div>
 
         {/* Empty state */}
@@ -223,12 +224,12 @@ export default function OwnerHostelListing() {
             <FaHome className="text-6xl text-purple-200 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-700 mb-2">No hostels yet</h3>
             <p className="text-gray-500 mb-6">Add your first hostel to start receiving bookings.</p>
-            <a
-              href="/hostel_owner/add-hostel"
+            <Link
+              to="/hostel_owner/add-hostel"
               className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition"
             >
               <FaPlus /> Add Hostel
-            </a>
+            </Link>
           </div>
         )}
 

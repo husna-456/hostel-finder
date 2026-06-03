@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { MdSpaceDashboard } from "react-icons/md";
-import { FaBookOpen, FaList, FaSignOutAlt, FaCreditCard } from "react-icons/fa";
+import { FaBookOpen, FaList, FaSignOutAlt, FaCreditCard, FaUserEdit, FaChevronUp } from "react-icons/fa";
 import { FaCalendarCheck } from "react-icons/fa6";
 import { MdMessage } from "react-icons/md";
 import { useAuth } from "../../context/AuthContext";
@@ -9,18 +9,34 @@ import { useAuth } from "../../context/AuthContext";
 export default function UserSidebar({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const name    = user?.name  || "User";
+  const email   = user?.email || "";
+  const initial = name.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    function onOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("user");
     logout();
     navigate("/");
   };
 
   const handleNavClick = () => {
-    if (window.innerWidth < 768) {
-      setIsOpen(false);
-    }
+    if (window.innerWidth < 768) setIsOpen(false);
   };
 
   const linkClass = ({ isActive }) =>
@@ -93,14 +109,49 @@ export default function UserSidebar({ isOpen, setIsOpen }) {
           </nav>
         </div>
 
-        {/* Logout */}
-        <div className="p-4 border-t">
+        {/* Bottom profile section */}
+        <div className="relative border-t p-3" ref={dropdownRef}>
+
+          {/* Upward dropdown */}
+          {showDropdown && (
+            <div className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+              <button
+                onClick={() => { setShowDropdown(false); handleNavClick(); navigate("/user/profile"); }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+              >
+                <FaUserEdit className="text-purple-500" />
+                Edit Profile
+              </button>
+              <div className="border-t border-gray-100" />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <FaSignOutAlt />
+                Logout
+              </button>
+            </div>
+          )}
+
+          {/* Profile trigger button */}
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-2 rounded-lg hover:bg-red-50 text-gray-700"
+            onClick={() => setShowDropdown(p => !p)}
+            className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition"
           >
-            <FaSignOutAlt className="text-xl" />
-            {isOpen && <span>Logout</span>}
+            <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+              {initial}
+            </div>
+            {isOpen && (
+              <>
+                <div className="flex flex-col text-left overflow-hidden flex-1">
+                  <span className="font-semibold text-sm text-gray-800 truncate">{name}</span>
+                  <span className="text-xs text-gray-400 truncate">{email}</span>
+                </div>
+                <FaChevronUp
+                  className={`text-gray-400 text-xs transition-transform shrink-0 ${showDropdown ? "" : "rotate-180"}`}
+                />
+              </>
+            )}
           </button>
         </div>
       </aside>

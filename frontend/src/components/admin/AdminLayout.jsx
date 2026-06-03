@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCog, Building2,
-  CalendarCheck, MessageSquare, Menu, X, Settings,
+  CalendarCheck, MessageSquare, Menu, X, Settings, ChevronDown,
 } from "lucide-react";
-import { FaBars } from "react-icons/fa";
+import { FaBars, FaUserEdit, FaSignOutAlt } from "react-icons/fa";
 
 const navItems = [
   { label: "Dashboard",         icon: LayoutDashboard, path: "/admin/dashboard" },
@@ -20,11 +20,34 @@ const navItems = [
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const profileRef = useRef(null);
   const location = useLocation();
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => { logout(); navigate("/admin-login"); };
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const adminName  = storedUser?.name  || "Admin User";
+  const adminEmail = storedUser?.email || "";
+  const initial    = adminName.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    function onOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfile(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("user");
+    logout();
+    navigate("/admin-login");
+  };
   const currentLabel = navItems.find((n) => n.path === location.pathname)?.label || "Admin";
 
   const NavContent = ({ onNavClick }) => (
@@ -124,14 +147,41 @@ export default function AdminLayout() {
             <h1 className="text-base font-semibold text-gray-800">{currentLabel}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-semibold text-gray-800">Admin User</p>
-              <p className="text-xs text-gray-500">admin@hostel.com</p>
-            </div>
-            <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              A
-            </div>
+          {/* Profile dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setShowProfile(p => !p)}
+              className="flex items-center gap-2 hover:bg-gray-100 rounded-xl px-2.5 py-1.5 transition"
+            >
+              <div className="hidden sm:block text-right">
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{adminName}</p>
+                <p className="text-xs text-gray-400">{adminEmail || "admin"}</p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                {initial}
+              </div>
+              <ChevronDown size={14} className={`text-gray-400 transition-transform ${showProfile ? "rotate-180" : ""}`} />
+            </button>
+
+            {showProfile && (
+              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                <button
+                  onClick={() => { setShowProfile(false); navigate("/admin/profile"); }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                >
+                  <FaUserEdit className="text-purple-500 text-xs" />
+                  Edit Profile
+                </button>
+                <div className="border-t border-gray-100" />
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <FaSignOutAlt className="text-xs" />
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
 

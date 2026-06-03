@@ -55,6 +55,9 @@ import PaymentPage from "./pages/user/PaymentPage";
 import PaymentsPage from "./pages/user/PaymentsPage";
 import PaymentSuccessPage from "./pages/user/PaymentSuccessPage";
 
+// ✅ Shared
+import ProfilePage from "./pages/ProfilePage";
+
 // ✅ Public Hostel Pages
 import AllHostels from "./pages/AllHostels";
 import HostelDetails from "./pages/HostelDetails";
@@ -182,6 +185,7 @@ function App() {
             <Route path="bookings" element={<BookingManagement />} />
             <Route path="chats" element={<ChatMonitoring />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           {/* 🏠 Owner Routes */}
@@ -205,6 +209,7 @@ function App() {
             <Route path="add-hostel/facilities" element={<Facilities />} />
             <Route path="bookings" element={<OwnerBookings />} />
             <Route path="hostels" element={<OwnerHostelListing />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           {/* 👤 User Routes */}
@@ -230,6 +235,7 @@ function App() {
             <Route path="payment/:bookingId" element={<PaymentPage />} />
             <Route path="payment-success" element={<PaymentSuccessPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route path="messages/:hostelId/:ownerId" element={<MessagesPage />} />
           </Route>
 

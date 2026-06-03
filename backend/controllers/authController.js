@@ -169,3 +169,55 @@ export const getUserProfile = async (req, res) => {
         res.status(500).json({ message: "Error fetching user profile" });
     }
 };
+
+// GET /api/auth/me — return logged-in user's full profile
+export const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+};
+
+// PUT /api/auth/update-profile
+export const updateProfile = async (req, res) => {
+    try {
+        const { name, email, profilePicture } = req.body;
+        const updates = {};
+        if (name)                       updates.name           = name;
+        if (email)                      updates.email          = email;
+        if (profilePicture !== undefined) updates.profilePicture = profilePicture;
+
+        const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true }).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Keep localStorage in sync: update stored user object for same session
+        res.json({ message: "Profile updated", user });
+    } catch (err) {
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+};
+
+// PUT /api/auth/change-password
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: "currentPassword and newPassword are required" });
+        }
+
+        const user = await User.findById(req.user._id).select("+password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        res.json({ message: "Password changed successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+};
