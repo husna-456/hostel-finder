@@ -38,34 +38,28 @@ export default function SearchBox() {
       alert("Please type location");
       return;
     }
-
-    setSearchFilters({
-      location,
-      category,
-      km,
-    });
-
+    setSearchFilters({ location, category, km });
     navigate("/results");
   };
 
   return (
     <div className="
-      bg-white/40 backdrop-blur-lg
+      bg-white/10 md:bg-white/40
+      backdrop-blur-md md:backdrop-blur-lg
       p-4 md:p-5
       rounded-2xl
-      shadow-md
       flex flex-col md:flex-row
       justify-between items-center
-      gap-4 md:gap-3
+      gap-3 md:gap-3
       max-w-6xl mx-auto
-      border border-gray-200
+      border border-white/20 md:border-gray-200
       transition-all duration-300
-      hover:shadow-xl
+      md:shadow-md md:hover:shadow-xl
     ">
 
       {/* LOCATION */}
       <div className="relative flex-[1.8] w-full h-12" ref={dropdownRef}>
-        <FaMapMarkerAlt className="absolute top-1/2 left-3 -translate-y-1/2 text-purple-600 text-lg opacity-90 z-10" />
+        <FaMapMarkerAlt className="absolute top-1/2 left-3 -translate-y-1/2 text-purple-300 md:text-purple-600 text-lg opacity-90 z-10" />
 
         <input
           type="text"
@@ -75,11 +69,11 @@ export default function SearchBox() {
           placeholder="Enter desired location"
           className="
             w-full h-full pl-10 pr-3
-            rounded-lg
-            border border-gray-300
-            bg-white/70
-            text-gray-700
-            placeholder-gray-400
+            rounded-xl md:rounded-lg
+            border border-white/25 md:border-gray-300
+            bg-white/15 md:bg-white/70
+            text-white md:text-gray-700
+            placeholder-white/60 md:placeholder-gray-400
             transition-all duration-300
             hover:border-purple-500
             focus:border-purple-600
@@ -114,10 +108,10 @@ export default function SearchBox() {
         onChange={(e) => setCategory(e.target.value)}
         className="
           flex-[1.8] w-full h-12 px-3
-          rounded-lg
-          border border-gray-300
-          bg-white/70
-          text-gray-700
+          rounded-xl md:rounded-lg
+          border border-white/25 md:border-gray-300
+          bg-white/15 md:bg-white/70
+          text-white md:text-gray-700
           transition-all duration-300
           hover:border-purple-500
           focus:border-purple-600
@@ -125,17 +119,17 @@ export default function SearchBox() {
           focus:outline-none
         "
       >
-        <option value="">Select Category</option>
-        <option value="boys">Boys Hostel</option>
-        <option value="girls">Girls Hostel</option>
-        <option value="guest">Guest House</option>
-        <option value="hotel">Hotel</option>
-        <option value="shortstay">Short Stay</option>
+        <option value="" className="text-gray-700 bg-white">Select Category</option>
+        <option value="boys" className="text-gray-700 bg-white">Boys Hostel</option>
+        <option value="girls" className="text-gray-700 bg-white">Girls Hostel</option>
+        <option value="guest" className="text-gray-700 bg-white">Guest House</option>
+        <option value="hotel" className="text-gray-700 bg-white">Hotel</option>
+        <option value="shortstay" className="text-gray-700 bg-white">Short Stay</option>
       </select>
 
       {/* RADIUS */}
       <div className="flex items-center gap-2 flex-[1.3] w-full h-12">
-        <span className="text-base font-medium text-gray-700 whitespace-nowrap">
+        <span className="text-base font-medium text-white/80 md:text-gray-700 whitespace-nowrap">
           Set Radius
         </span>
 
@@ -144,10 +138,10 @@ export default function SearchBox() {
           onChange={(e) => setKm(Number(e.target.value))}
           className="
             flex-1 h-full px-3
-            rounded-lg
-            border border-gray-300
-            bg-white/70
-            text-gray-700
+            rounded-xl md:rounded-lg
+            border border-white/25 md:border-gray-300
+            bg-white/15 md:bg-white/70
+            text-white md:text-gray-700
             transition-all duration-300
             hover:border-purple-500
             focus:border-purple-600
@@ -155,10 +149,10 @@ export default function SearchBox() {
             focus:outline-none
           "
         >
-          <option value={5}>5 km</option>
-          <option value={10}>10 km</option>
-          <option value={20}>20 km</option>
-          <option value={40}>40 km</option>
+          <option value={5} className="text-gray-700 bg-white">5 km</option>
+          <option value={10} className="text-gray-700 bg-white">10 km</option>
+          <option value={20} className="text-gray-700 bg-white">20 km</option>
+          <option value={40} className="text-gray-700 bg-white">40 km</option>
         </select>
       </div>
 
@@ -168,7 +162,7 @@ export default function SearchBox() {
         className="
           bg-purple-600 text-white
           px-8 h-12
-          rounded-lg
+          rounded-xl md:rounded-lg
           font-semibold
           flex items-center justify-center
           transition-all duration-300
