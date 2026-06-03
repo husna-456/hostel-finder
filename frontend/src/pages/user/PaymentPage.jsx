@@ -89,11 +89,18 @@ export default function PaymentPage() {
 
     try {
       setSubmitting(true);
-      const fileName = `receipts/${Date.now()}-${receiptFile.name}`;
-      const { error } = await supabase.storage.from("hostel-images").upload(fileName, receiptFile);
+      const fileExt  = receiptFile.name.split(".").pop();
+      const fileName = `receipts/${Date.now()}-${Math.random()}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("hostel-images")
+        .upload(fileName, receiptFile);
       if (error) throw error;
 
-      const { data } = supabase.storage.from("hostel-images").getPublicUrl(fileName);
+      const { data } = supabase.storage
+        .from("hostel-images")
+        .getPublicUrl(fileName);
+
       await submitManualPayment(bookingId, manualMethod, data.publicUrl, transactionRef);
       toast.success("Payment submitted, waiting for owner verification");
       loadPaymentData();
