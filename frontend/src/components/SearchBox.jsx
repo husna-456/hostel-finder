@@ -1,7 +1,13 @@
 import { FaMapMarkerAlt } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext";
+
+const GUJRANWALA_AREAS = [
+  "Satellite Town", "Model Town", "G.T Road", "Peoples Colony", "Wapda Town",
+  "Rahwali", "Canal Road", "Officer Colony", "Civil Lines", "Gujranwala Cantonment",
+  "Defence Road", "Shaheenabad", "Gulshan Iqbal", "Nawan Pind", "Gondlanwala Road"
+];
 
 export default function SearchBox() {
   const navigate = useNavigate();
@@ -10,6 +16,22 @@ export default function SearchBox() {
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
   const [km, setKm] = useState(40);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const filteredAreas = location
+    ? GUJRANWALA_AREAS.filter(a => a.toLowerCase().includes(location.toLowerCase()))
+    : GUJRANWALA_AREAS;
 
   const handleClick = () => {
     if (!location) {
@@ -42,13 +64,14 @@ export default function SearchBox() {
     ">
 
       {/* LOCATION */}
-      <div className="relative flex-[1.8] w-full h-12">
-        <FaMapMarkerAlt className="absolute top-1/2 left-3 -translate-y-1/2 text-purple-600 text-lg opacity-90" />
+      <div className="relative flex-[1.8] w-full h-12" ref={dropdownRef}>
+        <FaMapMarkerAlt className="absolute top-1/2 left-3 -translate-y-1/2 text-purple-600 text-lg opacity-90 z-10" />
 
         <input
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
+          onFocus={() => setShowDropdown(true)}
           placeholder="Enter desired location"
           className="
             w-full h-full pl-10 pr-3
@@ -64,6 +87,25 @@ export default function SearchBox() {
             focus:outline-none
           "
         />
+
+        {showDropdown && filteredAreas.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 max-h-48 overflow-y-auto z-50">
+            {filteredAreas.map((area) => (
+              <button
+                key={area}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setLocation(area);
+                  setShowDropdown(false);
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors first:rounded-t-xl last:rounded-b-xl"
+              >
+                {area}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CATEGORY */}
