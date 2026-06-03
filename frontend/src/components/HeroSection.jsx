@@ -2,7 +2,7 @@ import SearchBox from "./SearchBox";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const CITIES = ["Satellite Town", "Model Town", "G.T Road", "Peoples Colony", "Wapda Town", "Rahwali", "Canal Road", "Officer Colony", "Civil Lines", "Gujranwala Cantonment", "Defence Road", "Shaheenabad", "Gulshan Iqbal", "Nawan Pind", "Gondlanwala Road"];
+const AREAS = ["Satellite Town", "Model Town", "G.T Road", "Peoples Colony", "Wapda Town", "Rahwali", "Canal Road", "Officer Colony", "Civil Lines", "Cantonment", "Defence Road", "Shaheenabad", "Gulshan Iqbal", "Nawan Pind"];
 
 export default function HeroSection({ onSearch, bannerImage }) {
   const bgImage = bannerImage || "/banner.jpg";
@@ -10,7 +10,7 @@ export default function HeroSection({ onSearch, bannerImage }) {
 
   useEffect(() => {
     if (!onSearch) return;
-    const t = setInterval(() => setCityIndex(i => (i + 1) % CITIES.length), 2800);
+    const t = setInterval(() => setCityIndex(i => (i + 1) % AREAS.length), 2800);
     return () => clearInterval(t);
   }, [onSearch]);
 
@@ -61,7 +61,7 @@ export default function HeroSection({ onSearch, bannerImage }) {
               transition={{ delay: 0.5 }}
               className="flex items-center justify-center gap-2 mb-10 mt-4"
             >
-              <span className="text-white/60 text-lg">Gujranwala:</span>
+              <span className="text-white/60 text-lg">Near</span>
               <div className="overflow-hidden h-8 flex items-center">
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -72,10 +72,11 @@ export default function HeroSection({ onSearch, bannerImage }) {
                     transition={{ duration: 0.35, ease: "easeOut" }}
                     className="text-purple-300 font-extrabold text-lg block"
                   >
-                    {CITIES[cityIndex]}
+                    {AREAS[cityIndex]}
                   </motion.span>
                 </AnimatePresence>
               </div>
+              <span className="text-white/60 text-lg">&amp; more areas</span>
             </motion.div>
 
             {/* SearchBox */}
