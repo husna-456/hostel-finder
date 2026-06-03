@@ -8,8 +8,8 @@ let cachedAt = 0;
 export const refreshMaintenanceCache = () => { cached = null; cachedAt = 0; };
 
 export const maintenanceGuard = async (req, res, next) => {
-  // Always allow auth routes, admin routes, settings routes, and health check
-  const PASS = ["/api/auth", "/api/admin", "/api/settings", "/api/health"];
+  // Always allow auth routes, admin routes, settings routes, health check, and Stripe webhook
+  const PASS = ["/api/auth", "/api/admin", "/api/settings", "/api/health", "/api/payments/webhook", "/api/payment/webhook"];
   if (PASS.some(p => req.path.startsWith(p))) return next();
 
   try {

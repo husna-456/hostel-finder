@@ -291,81 +291,67 @@ export const stripeWebhook = async (req, res) => {
     return res.status(400).json({ message: "Webhook signature verification failed" });
   }
 
-  // Acknowledge receipt immediately
+  // Acknowledge receipt immediately so Stripe doesn't retry
   res.status(200).json({ received: true });
 
-  if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object;
-    const metadata = paymentIntent.metadata || {};
-    const { paymentId, bookingId } = metadata;
-
-    if (!paymentId) {
-      console.log("No paymentId in webhook metadata");
-      return;
-    }
-
+  // Helper: mark a payment+booking as paid and notify via email
+  const markPaid = async (paymentId, bookingId, stripePaymentIntentId) => {
+    if (!paymentId) { console.log("Webhook: no paymentId in metadata"); return; }
     try {
       const payment = await Payment.findById(paymentId);
-      if (!payment) {
-        console.log("Payment not found:", paymentId);
-        return;
-      }
-
-      if (payment.status === "paid") {
-        console.log("Payment already processed:", paymentId);
-        return;
+      if (!payment) { console.log("Webhook: payment not found", paymentId); return; }
+      if (["paid", "verified"].includes(payment.status)) {
+        console.log("Webhook: payment already processed", paymentId); return;
       }
 
       payment.status = "paid";
-      payment.stripePaymentIntentId = paymentIntent.id;
+      if (stripePaymentIntentId) payment.stripePaymentIntentId = stripePaymentIntentId;
       payment.paidAt = new Date();
       await payment.save();
 
-      // Keep booking.status = "pending" — owner must confirm reservation
       if (bookingId) {
         const booking = await Booking.findById(bookingId);
         if (booking) {
           booking.paymentStatus = "paid";
           await booking.save();
 
-          // Fire-and-forget: notify owner + user of card payment
           try {
             const hostel = await Hostel.findById(booking.hostelId).select("name ownerId");
-            const owner = await User.findById(hostel?.ownerId).select("email");
-            const guest = await User.findById(booking.userId).select("email name");
+            const owner  = await User.findById(hostel?.ownerId).select("email");
+            const guest  = await User.findById(booking.userId).select("email name");
 
-            if (owner?.email) {
-              transporter.sendMail({
-                to: owner.email,
-                subject: `Card Payment Received — ${hostel?.name}`,
-                html: `
-                  <h2>Student Paid via Card</h2>
-                  <p>A student has successfully paid the advance via card for <strong>${hostel?.name}</strong>.</p>
-                  <p>Please confirm their booking in your dashboard so the seat is reserved.</p>
-                `
-              });
-            }
+            if (owner?.email) transporter.sendMail({
+              to: owner.email,
+              subject: `Card Payment Received — ${hostel?.name}`,
+              html: `<h2>Student Paid via Card</h2><p>A student paid the advance for <strong>${hostel?.name}</strong>. Please verify and confirm their seat in your Bookings dashboard.</p>`
+            });
 
-            if (guest?.email) {
-              transporter.sendMail({
-                to: guest.email,
-                subject: `Payment Received — ${hostel?.name}`,
-                html: `
-                  <h2>Payment Received!</h2>
-                  <p>Hi ${guest.name},</p>
-                  <p>Your card payment for <strong>${hostel?.name}</strong> has been received successfully.</p>
-                  <p>Your booking is currently <strong>pending owner confirmation</strong>. We'll notify you once the owner confirms your seat.</p>
-                `
-              });
-            }
+            if (guest?.email) transporter.sendMail({
+              to: guest.email,
+              subject: `Payment Received — ${hostel?.name}`,
+              html: `<h2>Payment Received!</h2><p>Hi ${guest.name},</p><p>Your card payment for <strong>${hostel?.name}</strong> has been received. The owner will confirm your seat shortly.</p>`
+            });
           } catch (_) {}
         }
       }
-
-      console.log("Payment processed successfully:", paymentId);
-    } catch (error) {
-      console.log("Error processing webhook:", error.message);
+      console.log("Webhook: payment marked paid", paymentId);
+    } catch (err) {
+      console.log("Webhook: error processing", err.message);
     }
+  };
+
+  // PaymentIntent flow (used by the custom card element / PaymentForm)
+  if (event.type === "payment_intent.succeeded") {
+    const pi       = event.data.object;
+    const { paymentId, bookingId } = pi.metadata || {};
+    await markPaid(paymentId, bookingId, pi.id);
+  }
+
+  // Checkout Session flow (used if createStripeSession is ever called)
+  if (event.type === "checkout.session.completed") {
+    const session  = event.data.object;
+    const { paymentId, bookingId } = session.metadata || {};
+    await markPaid(paymentId, bookingId, session.payment_intent);
   }
 };
 
@@ -481,7 +467,7 @@ export const getMyPayments = async (req, res) => {
   }
 };
 
-// ---------- VERIFY MANUAL PAYMENT (OWNER) ----------
+// ---------- VERIFY PAYMENT (OWNER) — works for manual AND card payments ----------
 export const verifyPayment = async (req, res) => {
   try {
     const { paymentId } = req.params;
@@ -489,9 +475,14 @@ export const verifyPayment = async (req, res) => {
     const payment = await Payment.findById(paymentId);
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    if (payment.status !== "pending_verification") {
-      return res.status(400).json({ message: "Payment is not in pending_verification status" });
+    // Already finalised — nothing to do
+    if (payment.status === "verified") {
+      return res.status(400).json({ message: "Payment is already verified" });
     }
+    if (payment.status === "rejected") {
+      return res.status(400).json({ message: "Payment was already rejected" });
+    }
+    // Accept pending_verification (manual) AND paid (card/Stripe confirmed by frontend)
 
     payment.status = "verified";
     payment.paidAt = new Date();
@@ -544,21 +535,25 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
-// ---------- REJECT MANUAL PAYMENT (OWNER) ----------
+// ---------- REJECT PAYMENT (OWNER) — works for manual AND card payments ----------
 export const rejectPayment = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { rejectionReason } = req.body;
+    const { rejectionReason, reason } = req.body;
+    const rejectReason = rejectionReason || reason || "";
 
     const payment = await Payment.findById(paymentId);
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    if (payment.status !== "pending_verification") {
-      return res.status(400).json({ message: "Payment is not in pending_verification status" });
+    if (payment.status === "verified") {
+      return res.status(400).json({ message: "Payment is already verified and cannot be rejected" });
+    }
+    if (payment.status === "rejected") {
+      return res.status(400).json({ message: "Payment is already rejected" });
     }
 
     payment.status = "rejected";
-    payment.rejectionReason = rejectionReason || "";
+    payment.rejectionReason = rejectReason;
     await payment.save();
 
     // Update booking

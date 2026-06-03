@@ -4,13 +4,21 @@ import { FaCreditCard, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTrian
 import { getMyPayments } from "../../api/payment.api";
 
 const STATUS_META = {
-  verified:    { icon: FaCheckCircle, color: "bg-green-100 text-green-700", label: "Paid" },
-  reserved:    { icon: FaCheckCircle, color: "bg-green-100 text-green-700", label: "Paid" },
-  "payment-submitted": { icon: FaClock, color: "bg-blue-100 text-blue-700", label: "Pending" },
-  pending:     { icon: FaClock, color: "bg-yellow-100 text-yellow-700", label: "Pending" },
-  "pending-payment": { icon: FaClock, color: "bg-yellow-100 text-yellow-700", label: "Pending" },
-  rejected:    { icon: FaTimesCircle, color: "bg-red-100 text-red-700", label: "Failed" },
-  "payment-rejected": { icon: FaTimesCircle, color: "bg-red-100 text-red-700", label: "Failed" },
+  // ── success states ──
+  verified:             { icon: FaCheckCircle, color: "bg-green-100 text-green-700",  label: "Verified" },
+  paid:                 { icon: FaCheckCircle, color: "bg-green-100 text-green-700",  label: "Paid (Card)" },
+  reserved:             { icon: FaCheckCircle, color: "bg-green-100 text-green-700",  label: "Confirmed" },
+  // ── review / waiting ──
+  pending_verification: { icon: FaClock,       color: "bg-blue-100 text-blue-700",    label: "Under Review" },
+  "payment-submitted":  { icon: FaClock,       color: "bg-blue-100 text-blue-700",    label: "Under Review" },
+  // ── not yet paid ──
+  pending:              { icon: FaClock,       color: "bg-yellow-100 text-yellow-700", label: "Pending" },
+  "pending-payment":    { icon: FaClock,       color: "bg-yellow-100 text-yellow-700", label: "Pending" },
+  unpaid:               { icon: FaClock,       color: "bg-yellow-100 text-yellow-700", label: "Unpaid" },
+  // ── failures ──
+  rejected:             { icon: FaTimesCircle, color: "bg-red-100 text-red-700",      label: "Rejected" },
+  "payment-rejected":   { icon: FaTimesCircle, color: "bg-red-100 text-red-700",      label: "Rejected" },
+  failed:               { icon: FaTimesCircle, color: "bg-red-100 text-red-700",      label: "Failed" },
 };
 
 export default function PaymentsPage() {

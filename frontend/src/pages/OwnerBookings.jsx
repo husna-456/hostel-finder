@@ -57,8 +57,11 @@ function ActionsMenu({ booking, onAction }) {
   const items = [];
   if (booking.status === "pending")   items.push({ label: "Accept Booking",    action: "accept",   cls: "text-green-700 hover:bg-green-50" });
   if (booking.status === "pending")   items.push({ label: "Reject Booking",    action: "reject",   cls: "text-red-600  hover:bg-red-50" });
-  if (booking.payment?.status === "pending_verification") {
-    items.push({ label: "Verify Payment",  action: "verify",  cls: "text-emerald-700 hover:bg-emerald-50" });
+  // Show Verify/Reject for manual receipts (pending_verification) AND confirmed card payments (paid)
+  const payStatus = booking.payment?.status;
+  if (payStatus === "pending_verification" || payStatus === "paid") {
+    const isCard = booking.payment?.method === "stripe";
+    items.push({ label: isCard ? "Confirm Card Payment" : "Verify Payment", action: "verify",    cls: "text-emerald-700 hover:bg-emerald-50" });
     items.push({ label: "Reject Payment",  action: "rejectPay", cls: "text-red-600 hover:bg-red-50" });
   }
   if (booking.status === "reserved")  items.push({ label: "Mark Completed",   action: "complete", cls: "text-blue-700 hover:bg-blue-50" });
