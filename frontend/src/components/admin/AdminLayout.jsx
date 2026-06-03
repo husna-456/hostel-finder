@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCog, Building2,
-  CalendarCheck, MessageSquare, Menu, X,
+  CalendarCheck, MessageSquare, Menu, X, Settings,
 } from "lucide-react";
 import { FaBars } from "react-icons/fa";
 
@@ -14,6 +14,7 @@ const navItems = [
   { label: "Hostel Management", icon: Building2,       path: "/admin/hostels" },
   { label: "Booking Management",icon: CalendarCheck,   path: "/admin/bookings" },
   { label: "Chat Monitoring",   icon: MessageSquare,   path: "/admin/chats" },
+  { label: "Settings",          icon: Settings,        path: "/admin/settings" },
 ];
 
 export default function AdminLayout() {

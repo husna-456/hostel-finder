@@ -1,9 +1,57 @@
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { Hostel } from "../models/Hostel.js";
 import Booking from "../models/Booking.js";
 import Payment from "../models/Payment.js";
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
+import transporter from "../config/nodemailer.js";
+
+// ── CREATE USER (admin) ───────────────────────────────────────────────────────
+export const adminCreateUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "name, email, password and role are required" });
+    }
+    if (!["user", "hostel_owner"].includes(role)) {
+      return res.status(400).json({ message: "Role must be 'user' or 'hostel_owner'" });
+    }
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: "Email already registered" });
+
+    const hashed = await bcrypt.hash(password, 10);
+    const user   = await User.create({ name, email, password: hashed, role, isVerified: true });
+
+    // Fire-and-forget: email the new user their credentials
+    try {
+      transporter.sendMail({
+        to: email,
+        subject: "Your Hostel Finder Account",
+        html: `<h2>Account Created</h2><p>Hi ${name},</p><p>An admin has created a <strong>${role}</strong> account for you on Hostel Finder.</p><ul><li>Email: ${email}</li><li>Password: ${password}</li></ul><p>Please log in and change your password.</p>`,
+      });
+    } catch (_) {}
+
+    res.status(201).json({ message: "User created successfully", user: { _id: user._id, name, email, role, isVerified: true, isBlocked: false, createdAt: user.createdAt } });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// ── CHANGE USER ROLE ─────────────────────────────────────────────────────────
+export const changeUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!["user", "hostel_owner", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: `Role changed to ${role}`, user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 
 // ── USERS ─────────────────────────────────────────────────────────────────────
 export const getAllUsers = async (req, res) => {

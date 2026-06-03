@@ -62,6 +62,7 @@ You are a Senior Full-Stack Developer. Work carefully, phase by phase.
 - Hostel: { name, type, location(GeoJSON), address, rooms[{roomId, title, type, advanceAmount, seatPrice, totalSeats, reservedSeats}], floors, facilities, images, ownerId, contact, jazzCashNumber, easypaisaNumber, isBlocked }
 - Booking: { hostelId, userId, roomId, roomType, name, contactNo, email, people, status[pending|accepted|rejected|cancelled|reserved|completed], paymentStatus[unpaid|pending|pending_verification|paid|verified|rejected], proposedStatus }
 - Payment: { bookingId, userId, ownerId, hostelId, roomId, amount, method[stripe|jazzcash|easypaisa], stripePaymentIntentId, stripeSessionId, receiptScreenshot, status[pending|pending_verification|paid|verified|failed|rejected], paidAt }
+- Settings (NEW — singleton): { siteName, logoUrl, supportEmail, supportPhone, primaryCity, featuredHostelLimit, advancePercent, platformCommission, stripeEnabled, jazzCashEnabled, easypaisaEnabled, maintenanceMode, allowUserRegistration, allowOwnerRegistration, termsAndConditions, privacyPolicy, updatedBy }
 
 ---
 
@@ -85,7 +86,7 @@ Implementation rule:
 The ENTIRE web app MUST be fully mobile responsive. Every single page on all 3 panels (User, Owner, Admin) must look perfect and work correctly at 375px width (iPhone SE). This is a hard requirement — no page may be skipped. See Phase 4 for the full checklist.
 
 ### DECISION 3: Admin Panel = Central Control
-The Admin panel is the most important control center. Admin must have complete, dynamic, real-time control over ALL users, ALL owners, ALL hostels, ALL bookings, and ALL chats. Nothing in the admin panel should be hardcoded/fake. See Phase 8 and Phase 9.
+The Admin panel is the most important control center. Admin must have complete, dynamic, real-time control over ALL users, ALL owners, ALL hostels, ALL bookings, ALL chats, AND the platform's general settings. Nothing in the admin panel should be hardcoded/fake. See Phase 8, Phase 9, and Phase 11.
 
 ---
 
@@ -206,6 +207,7 @@ This is a HARD requirement. The ENTIRE web app must be fully mobile responsive. 
 - HostelManagement.jsx — desktop table + mobile cards
 - BookingManagement.jsx — desktop table + mobile cards
 - ChatMonitoring.jsx — list + full-screen chat modal on mobile
+- SettingsPage.jsx — tabbed settings form; tabs scroll horizontally on mobile, inputs/toggles stack full width (built in Phase 11)
 
 ### Sidebar pattern (apply to all 3 sidebars — User, Owner, Admin):
 - On mobile (< md): sidebar hidden by default, slides in as an overlay when toggled open.
@@ -285,6 +287,8 @@ Before calling done, verify:
 - [ ] All email sends are fire-and-forget (don't block response)
 - [ ] Owner edit/delete endpoints verify ownership
 - [ ] Admin override endpoints (edit/delete/block any hostel) work WITHOUT ownership check
+- [ ] Admin can create users (clients + owners) and change any user's role
+- [ ] Platform settings exist, are admin-editable, and actually take effect (maintenance mode, registration + payment-method toggles, advance %)
 
 ### Frontend:
 - [ ] No `http://localhost:3000` anywhere — all use fetchClient or VITE_API_URL
@@ -293,6 +297,7 @@ Before calling done, verify:
 - [ ] PaymentsPage exists and route added
 - [ ] PaymentPage loads correct advance amount
 - [ ] Owner can edit and delete their own hostels
+- [ ] Admin can add users, change roles, and edit the platform settings page
 - [ ] **EVERY page on all 3 panels is mobile responsive (tested at 375px)** — this is mandatory
 - [ ] Navbar hamburger works on mobile
 - [ ] All 3 sidebars (User, Owner, Admin) work as overlay on mobile
@@ -302,7 +307,9 @@ Before calling done, verify:
 - [ ] Manual payment: submit receipt → owner verifies → emails sent
 - [ ] Email received on: booking created, payment verified
 - [ ] Owner can edit and delete own hostels; admin can edit/delete/block ANY hostel
-- [ ] Admin panel has full control over users, owners, hostels, bookings, chats
+- [ ] Admin panel has full control over users, owners, hostels, bookings, chats, and settings
+- [ ] Admin-created user/owner can log in; a changed role takes effect on next login
+- [ ] Turning maintenance mode on blocks non-admins; disabling a payment method hides/blocks it
 - [ ] All pages look good on 375px (iPhone SE)
 
 ---
@@ -327,8 +334,9 @@ Now follow it phase by phase:
 - Phase 6: REMOVED — do not add the private room rental feature
 - Phase 7: Final verification checklist
 - Phase 8: Make all 3 dashboards fully dynamic (real data)
-- Phase 9: Make the entire admin panel fully dynamic and powerful (full control over users, owners, hostels, bookings, chats)
+- Phase 9: Make the entire admin panel fully dynamic and powerful (full control over users, owners, hostels, bookings, chats — including creating users and changing roles)
 - Phase 10: Professional Owner Bookings + User My Bookings redesign
+- Phase 11: Platform / General Settings controlled by admin (site config, maintenance mode, registration + payment toggles, legal text)
 
 Read every file before editing it.
 Never break working code — only fix what's broken or add what's missing.
@@ -422,7 +430,7 @@ All KPIs, charts, and top-hostels are hardcoded. Replace with real API data:
 
 ## PHASE 9 — FULLY DYNAMIC & POWERFUL ADMIN PANEL (CENTRAL CONTROL)
 
-The admin panel is the central control center of the whole app. All 5 admin pages are currently hardcoded with fake data. Make them ALL fully dynamic, real-time, and give admin COMPLETE control over users, owners, hostels, bookings, and chats. Nothing here should be fake.
+The admin panel is the central control center of the whole app. All 5 admin pages are currently hardcoded with fake data. Make them ALL fully dynamic, real-time, and give admin COMPLETE control over users, owners, hostels, bookings, and chats. Nothing here should be fake. (Platform-wide General Settings are a separate admin power — see Phase 11.)
 
 ### Current state (all fake — must be replaced):
 - UserManagement → hardcoded users
@@ -432,13 +440,15 @@ The admin panel is the central control center of the whole app. All 5 admin page
 - ChatMonitoring → hardcoded chats
 
 ### Admin powers required (the full control admin must have):
-- **Users**: view all, search, block/unblock, delete, change role.
+- **Users**: create new accounts (both clients AND owners), view all, search, block/unblock, delete, and change role — promote a client to owner, or move anyone between user / hostel_owner / admin.
 - **Owners**: view all (with their hostel count + booking stats + acceptance rate), block/unblock, delete.
 - **Hostels**: view all (with owner info, room/seat counts, booking count), block/unblock, AND full override edit + delete on ANY hostel (per DECISION 1 — admin skips ownership checks).
 - **Bookings**: view all, force-cancel any booking, see payment status/amount per booking.
 - **Chats**: view (read-only) all conversations and their messages between users and owners.
 
 ### Backend — expand adminController.js with these functions:
+- `adminCreateUser` — admin creates a new account directly. Takes name, email, password, and role (`user` or `hostel_owner`). Reject if the email already exists, hash the password, and mark the account as verified (admin-created accounts are pre-verified). Email the new person their login details (using the existing transporter, fire-and-forget). A newly created owner then also appears under OwnerManagement.
+- `changeUserRole` — set a user's role to one of `user` / `hostel_owner` / `admin` (validate the value). This lets the admin hand out owner or client roles freely. (Can be its own endpoint or done via the existing update-role function.)
 - `toggleUserBlock` — block/unblock a user (toggles `isBlocked`).
 - `getAllOwners` — all owners enriched with hostelCount, totalBookings, acceptanceRate, isBlocked, joined date.
 - `getAllHostels` — all hostels enriched with owner name/email, room count, available seats, booking count, isBlocked.
@@ -452,7 +462,7 @@ The admin panel is the central control center of the whole app. All 5 admin page
 Also ensure the `isBlocked` boolean field exists on both the User model and the Hostel model (default false).
 
 ### Backend — update adminRoutes.js (all behind protect + checkRole("admin")):
-- Users: list, get-by-id, delete, update-role, toggle-block.
+- Users: **create**, list, get-by-id, delete, **update-role / change-role**, toggle-block.
 - Owners: list, toggle-block (reuse user toggle), delete (reuse user delete).
 - Hostels: list, toggle-block, **admin-update (override edit)**, **admin-delete (override delete)**.
 - Bookings: list, force-cancel.
@@ -461,9 +471,12 @@ Also ensure the `isBlocked` boolean field exists on both the User model and the 
 ### Frontend — make each admin page dynamic (keep existing UI structure, only swap fake data for real + wire actions):
 
 **UserManagement.jsx**
-- Fetch real users (filter to role "user"), search by name/email.
+- Fetch real users, search by name/email.
 - Stat cards: total, active, blocked, joined this month.
-- Block/Unblock and Delete actions → call real API → Swal confirm → toast → update local state.
+- **"+ Add User" button** at the top → opens a modal with name, email, password, and a **role dropdown (Client / Hostel Owner)** → calls the create endpoint → refreshes the list + toast. (A new owner will also show up in OwnerManagement.)
+- Per-user actions: **Change Role** (dropdown user ↔ owner ↔ admin, Swal confirm → calls change-role), Block/Unblock, Delete → call real API → Swal confirm → toast → update local state.
+- Show the current role as a small badge (Client / Owner / Admin).
+- Either add role tabs/filter (All / Clients / Owners / Admins) here, or keep clients here and let owners surface in OwnerManagement — pick one and stay consistent.
 - Desktop table + mobile cards.
 
 **OwnerManagement.jsx**
@@ -498,9 +511,9 @@ Also ensure the `isBlocked` boolean field exists on both the User model and the 
 
 ### Key rules for all admin pages:
 - Always use fetchClient — never hardcode localhost URLs.
-- Every action (block, delete, force-cancel, edit) calls the real API, then updates local state.
+- Every action (create, block, delete, force-cancel, edit, change role) calls the real API, then updates local state.
 - Show a loading spinner while fetching.
-- Show a Swal confirmation before any destructive action (delete, block, force-cancel).
+- Show a Swal confirmation before any destructive action (delete, block, force-cancel, role change).
 - Show a toast on success/error.
 - Keep the existing UI design — only replace fake data with real and wire up actions; don't redesign.
 - Provide mobile cards for every page (responsive is mandatory — see Phase 4).
@@ -509,7 +522,7 @@ Also ensure the `isBlocked` boolean field exists on both the User model and the 
 
 | Page | Before | After |
 |------|--------|-------|
-| UserManagement | Fake users, no API | Real users; block/unblock/delete works |
+| UserManagement | Fake users, no API | Real users; create users (client+owner), change role, block/unblock/delete |
 | OwnerManagement | Fake owners, fake stats | Real owners with hostel count + acceptance rate |
 | HostelManagement | Fake hostels | Real hostels; block/unblock + admin override edit/delete |
 | BookingManagement | Fake bookings | All real bookings; force cancel works |
@@ -553,3 +566,55 @@ Goal: make OwnerBookings.jsx and the user's MyBookings.jsx fully professional, l
 | BookingRow | Confusing split badges | Deleted — replaced by BookingCard inside MyBookings |
 | Payment flow | Unclear when to pay | Clear "Pay Now" appears only when accepted |
 | Receipt viewing | Owner only in PendingPayments | In OwnerBookings table + lightbox |
+
+---
+
+## PHASE 11 — PLATFORM / GENERAL SETTINGS (ADMIN-CONTROLLED)
+
+Goal: give the admin one place to control the whole app's general settings. These are NOT cosmetic — they must actually change how the app behaves. This is the "general settings" power referenced in DECISION 3. Keep the purple theme. Fully mobile responsive.
+
+### Settings the admin can control (grouped into tabs):
+- **General / Branding**: site name, logo image URL, support email, support phone, primary city, number of featured hostels shown on the homepage.
+- **Booking & Payments**: advance percentage (the % of seat price taken as advance), platform commission %, and an on/off toggle for each payment method (Stripe / JazzCash / Easypaisa).
+- **Access Control**: maintenance mode (on/off), allow new user (client) registration (on/off), allow new owner registration (on/off).
+- **Legal**: Terms & Conditions text, Privacy Policy text.
+
+### Backend — what to build:
+- A **single global Settings document** (a singleton — only one config row ever exists; create it automatically on first read if missing). Fields are listed in the Models summary at the top.
+- `getSettings` (admin) — return the global settings document.
+- `updateSettings` (admin) — partial update of only the allowed fields; record who updated it.
+- `getPublicSettings` (PUBLIC, no auth) — return only the safe fields the frontend/public needs: site name, logo, support info, maintenance flag, registration toggles, payment-method toggles, advance %, and legal text.
+
+### Backend — routes:
+- `GET /api/admin/settings` and `PUT /api/admin/settings` — admin only.
+- `GET /api/settings/public` — public (no auth), mounted in app.js.
+
+### Backend — make the settings ACTUALLY take effect (this is the important part):
+- **Maintenance mode**: when it's on, block every non-admin request (allow login/auth routes and admins through) and return a clear "site under maintenance" message. Read the flag from settings (cache it briefly for performance and refresh it after an update).
+- **Registration toggles**: in signup/register, reject a new client signup when user registration is off, and reject a new owner signup when owner registration is off — with a clear message.
+- **Payment-method toggles**: in the payment flow, reject or hide a method (Stripe / JazzCash / Easypaisa) when its toggle is off.
+- **Advance %**: wherever the advance amount is computed, read the percentage from settings instead of any hardcoded number.
+
+### Frontend — Settings page (new SettingsPage.jsx in the admin panel):
+- A tabbed form with the four tabs above (General · Booking & Payments · Access Control · Legal).
+- Text inputs for names/contacts/URLs, number inputs for percentages and limits, on/off toggle switches for the boolean flags, and textareas for the legal text.
+- Load current values from `/admin/settings`; one **Save** button sends the changes to the update endpoint; show a toast on success/error.
+- Fully mobile responsive (tabs scroll horizontally, fields stack — see Phase 4).
+- Add a **Settings** link in the admin sidebar and register the `/admin/settings` route in the admin layout/router.
+
+### Frontend — use the public settings across the app (optional but recommended):
+- On app load, read `/api/settings/public` once and use it to show the site name + logo in the navbar, and to show a maintenance banner when maintenance mode is on.
+
+### SUMMARY — what the admin gains in Phase 11:
+
+| Setting group | Admin can control |
+|---------------|-------------------|
+| General / Branding | Site name, logo, support email/phone, primary city, featured-hostels count |
+| Booking & Payments | Advance %, commission %, enable/disable Stripe / JazzCash / Easypaisa |
+| Access Control | Maintenance mode, open/close user registration, open/close owner registration |
+| Legal | Terms & Conditions, Privacy Policy text |
+
+### Build notes:
+- Build the singleton Settings model + the three endpoints first, then wire the enforcement (maintenance gate, registration + payment toggles, advance %), then the admin Settings page last.
+- Verify it works end to end: flip maintenance mode on → a normal user is blocked, admin still works; disable a payment method → it disappears/rejects in checkout; change advance % → the payment page reflects the new amount.
+

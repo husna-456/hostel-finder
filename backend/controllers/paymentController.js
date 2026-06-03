@@ -4,6 +4,7 @@ import Booking from "../models/Booking.js";
 import { Hostel } from "../models/Hostel.js";
 import User from "../models/User.js";
 import transporter from "../config/nodemailer.js";
+import { getOrCreate as getSettings } from "./settingsController.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -23,6 +24,12 @@ const reserveSeat = async (hostelId, roomId) => {
 // ---------- STRIPE PAYMENT INTENT ----------
 export const createPaymentIntent = async (req, res) => {
   try {
+    // Check if Stripe is enabled in platform settings
+    try {
+      const s = await getSettings();
+      if (!s.stripeEnabled) return res.status(403).json({ message: "Card payments are currently disabled." });
+    } catch (_) {}
+
     console.log("📥 create-payment-intent body:", JSON.stringify(req.body, null, 2));
 
     const { amount, currency = "pkr", bookingId } = req.body;
@@ -156,6 +163,11 @@ export const confirmBooking = async (req, res) => {
 // ---------- STRIPE CHECKOUT SESSION ----------
 export const createStripeSession = async (req, res) => {
   try {
+    try {
+      const s = await getSettings();
+      if (!s.stripeEnabled) return res.status(403).json({ message: "Card payments are currently disabled." });
+    } catch (_) {}
+
     console.log("📥 create-stripe-session body:", JSON.stringify(req.body, null, 2));
 
     let { bookingId, amount, roomId } = req.body;
@@ -369,6 +381,15 @@ export const manualPayment = async (req, res) => {
     if (!["jazzcash", "easypaisa"].includes(method)) {
       return res.status(400).json({ message: "Invalid payment method" });
     }
+
+    // Check if this payment method is enabled in platform settings
+    try {
+      const s = await getSettings();
+      if (method === "jazzcash" && !s.jazzCashEnabled)
+        return res.status(403).json({ message: "JazzCash payments are currently disabled." });
+      if (method === "easypaisa" && !s.easypaisaEnabled)
+        return res.status(403).json({ message: "Easypaisa payments are currently disabled." });
+    } catch (_) {}
 
     const booking = await Booking.findById(bookingId);
     if (!booking) return res.status(404).json({ message: "Booking not found" });

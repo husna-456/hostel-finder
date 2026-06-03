@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 const { Types: { ObjectId } } = mongoose;
 import Booking from "../models/Booking.js";
+import Payment from "../models/Payment.js";
 import { Hostel } from "../models/Hostel.js";
 import User from "../models/User.js";
 import transporter from "../config/nodemailer.js";
@@ -100,14 +101,34 @@ export const getBookings = async (req, res) => {
 };
 
 // --------------------------------
-// USER: Get My Bookings
+// USER: Get My Bookings (with latest payment)
 // --------------------------------
 export const getUserBookings = async (req, res) => {
   try {
     const userId = req.user._id;
     const bookings = await Booking.find({ userId })
-      .populate("hostelId", "name images startingRent");
-    res.status(200).json(bookings);
+      .populate("hostelId", "name images startingRent rooms")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const payments = await Payment.find({ userId }).sort({ createdAt: -1 });
+    const payMap = {};
+    payments.forEach(p => {
+      const key = p.bookingId?.toString();
+      if (key && !payMap[key]) payMap[key] = p;
+    });
+
+    const enriched = bookings.map(b => {
+      const pay = payMap[b._id.toString()];
+      const room = b.hostelId?.rooms?.find(r => r.roomId === b.roomId);
+      return {
+        ...b,
+        advanceAmount: room?.advanceAmount ?? null,
+        payment: pay ? { _id: pay._id, status: pay.status, amount: pay.amount, method: pay.method, receiptScreenshot: pay.receiptScreenshot, rejectionReason: pay.rejectionReason } : null,
+      };
+    });
+
+    res.status(200).json(enriched);
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
@@ -129,16 +150,25 @@ export const getOwnerBookings = async (req, res) => {
     const bookings = await Booking.find({ hostelId: { $in: hostelIds } })
       .populate("hostelId", "name rooms jazzCashNumber easypaisaNumber")
       .populate("userId", "name email")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Attach advanceAmount from the matched room on each booking
+    // Attach advanceAmount + latest payment per booking
+    const payments = await Payment.find({ ownerId: req.user._id }).sort({ createdAt: -1 });
+    const payMap = {};
+    payments.forEach(p => {
+      const key = p.bookingId?.toString();
+      if (key && !payMap[key]) payMap[key] = p;
+    });
+
     const enriched = bookings.map((b) => {
-      const obj = b.toObject();
-      if (obj.hostelId?.rooms && obj.roomId) {
-        const room = obj.hostelId.rooms.find((r) => r.roomId === obj.roomId);
-        obj.advanceAmount = room?.advanceAmount ?? null;
-      }
-      return obj;
+      const room = b.hostelId?.rooms?.find(r => r.roomId === b.roomId);
+      const pay  = payMap[b._id.toString()];
+      return {
+        ...b,
+        advanceAmount: room?.advanceAmount ?? null,
+        payment: pay ? { _id: pay._id, status: pay.status, amount: pay.amount, method: pay.method, receiptScreenshot: pay.receiptScreenshot, rejectionReason: pay.rejectionReason } : null,
+      };
     });
 
     res.status(200).json(enriched);
@@ -154,7 +184,7 @@ export const updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!status || !["accepted", "rejected"].includes(status)) {
+    if (!status || !["accepted", "rejected", "reserved", "completed"].includes(status)) {
       return res.status(400).json({ message: "Invalid or missing status" });
     }
 
@@ -249,6 +279,25 @@ export const cancelBooking = async (req, res) => {
 
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: "Server Error", error: err.message });
+  }
+};
+
+// OWNER: Mark booking as completed
+export const markBookingCompleted = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    const hostel = await Hostel.findById(booking.hostelId);
+    if (!hostel || hostel.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    booking.status = "completed";
+    await booking.save();
+    res.json({ message: "Booking marked as completed", booking });
+  } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };

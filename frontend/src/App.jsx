@@ -31,6 +31,7 @@ import OwnerManagement from "./pages/admin/OwnerManagement";
 import HostelManagement from "./pages/admin/HostelManagement";
 import BookingManagement from "./pages/admin/BookingManagement";
 import ChatMonitoring from "./pages/admin/ChatMonitoring";
+import SettingsPage from "./pages/admin/SettingsPage";
 
 // ✅ Owner Pages
 import OwnerLayout from "./pages/OwnerLayout";
@@ -179,6 +180,7 @@ function App() {
             <Route path="hostels" element={<HostelManagement />} />
             <Route path="bookings" element={<BookingManagement />} />
             <Route path="chats" element={<ChatMonitoring />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* 🏠 Owner Routes */}

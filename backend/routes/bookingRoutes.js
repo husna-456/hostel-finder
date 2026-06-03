@@ -1,5 +1,5 @@
 import express from "express";
-import { createBooking,getBookings,getOwnerBookings,getUserBookings,updateBookingStatus, cancelBooking,getSingleBooking} from "../controllers/bookingController.js";
+import { createBooking,getBookings,getOwnerBookings,getUserBookings,updateBookingStatus, cancelBooking,getSingleBooking,markBookingCompleted} from "../controllers/bookingController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.get("/my", protect, getUserBookings);
 // OWNER
 router.get("/owner", protect, getOwnerBookings);
 router.patch("/:id/status", protect, updateBookingStatus);
+router.patch("/:id/complete", protect, markBookingCompleted);
 router.get("/:id", getSingleBooking);
 
 // NOT NEEDED for user

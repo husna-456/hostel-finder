@@ -3,6 +3,9 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
+// Middleware
+import { maintenanceGuard } from "./middleware/maintenanceMiddleware.js";
+
 // Routes
 import authRoutes from "./routes/authRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
@@ -14,6 +17,7 @@ import locationRoutes from "./routes/locationRoutes.js";
 import conversationRoutes from "./routes/conversation.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 
 const app = express();
 
@@ -46,6 +50,9 @@ app.use(
   })
 );
 
+// Maintenance mode guard (applied before all API routes)
+app.use(maintenanceGuard);
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
@@ -58,6 +65,7 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

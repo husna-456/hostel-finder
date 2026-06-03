@@ -2,6 +2,7 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { getOrCreate as getSettings } from "./settingsController.js";
 
 // JWT generate karne ka function
 const generateToken = (id, role) => {
@@ -48,6 +49,17 @@ if (!strongPasswordRegex.test(password)) {
 if (password !== confirmPassword) {
   return res.status(400).json({ message: "Passwords do not match" });
 }
+
+        // Check registration toggles from platform settings
+        try {
+          const settings = await getSettings();
+          if (role === "user" && !settings.allowUserRegistration) {
+            return res.status(403).json({ message: "New user registration is currently disabled." });
+          }
+          if (role === "hostel_owner" && !settings.allowOwnerRegistration) {
+            return res.status(403).json({ message: "New hostel owner registration is currently disabled." });
+          }
+        } catch (_) {}
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
