@@ -13,15 +13,7 @@ export default function OwnerChat() {
   };
 
   return (
-    /*
-     * OwnerLayout/main has: sticky top-bar (~48px) + p-4 on mobile  → ~64px = 4rem
-     *                       p-6 on desktop                          → 48px  = 3rem
-     * No negative margins — parent padding keeps chat off the edges.
-     */
-    <div
-      className="flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm
-                 h-[calc(100vh-4rem)] md:h-[calc(100vh-3rem)]"
-    >
+    <div className="flex h-full overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
       {/* ── Conversation list ── */}
       <div
         className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0

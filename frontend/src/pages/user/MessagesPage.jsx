@@ -33,16 +33,7 @@ export default function MessagesPage() {
   };
 
   return (
-    /*
-     * UserLayout/main has:  pt-16 p-4 on mobile  →  total vertical = 80px = 5rem
-     *                       p-6 on desktop        →  total vertical = 48px = 3rem
-     * Height = 100vh minus those values so the chat fills the area without overflow.
-     * No negative margins — the parent's padding provides proper edge spacing.
-     */
-    <div
-      className="flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm
-                 h-[calc(100vh-5rem)] md:h-[calc(100vh-3rem)]"
-    >
+    <div className="flex h-full overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
       {/* ── Conversation list ── */}
       <div
         className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0

@@ -7,12 +7,12 @@ export default function OwnerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <OwnerSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       {/* Content — on mobile no margin (sidebar is overlay); on desktop shift right */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
           sidebarOpen ? "md:ml-60" : "md:ml-16"
         }`}
       >
@@ -27,7 +27,7 @@ export default function OwnerLayout() {
           <span className="text-base font-bold text-purple-600">Owner Panel</span>
         </div>
 
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </main>
       </div>
