@@ -14,7 +14,7 @@ export default function UserLayout() {
   }, []);
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
+    <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
       <UserSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       {!sidebarOpen && (
@@ -27,11 +27,11 @@ export default function UserLayout() {
       )}
 
       <div
-        className={`h-full flex flex-col transition-all duration-300 ${
+        className={`flex-1 min-h-0 flex flex-col transition-all duration-300 ${
           sidebarOpen ? "ml-0 md:ml-60" : "ml-0 md:ml-16"
         }`}
       >
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-16 md:pt-6">
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 pt-16 md:pt-6">
           <Outlet />
         </main>
       </div>
