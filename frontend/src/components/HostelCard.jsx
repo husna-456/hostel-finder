@@ -96,27 +96,28 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
             }}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl
                        border-2 border-purple-600 text-purple-600 text-sm font-semibold
-                       hover:bg-purple-600 hover:text-white transition-all duration-200"
+                       hover:bg-purple-600 hover:text-white transition-all duration-200
+                       whitespace-nowrap"
           >
             <Eye className="w-4 h-4 shrink-0" />
             View Details
           </button>
 
-         
-                   {/* Chat with Owner — only for user panel */}
-                   {userPanel && (
-                     <button
-                       disabled={!ownerId || !hostelId}
-                       onClick={() => navigate(`/user/messages/${hostelId}/${ownerId}?isSidePanel=true`)}
-                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl
-                                  bg-purple-600 text-white text-sm font-semibold
-                                  hover:bg-purple-700 transition-all duration-200
-                                  disabled:opacity-50 disabled:cursor-not-allowed"
-                     >
-                       <MessageCircle className="w-4 h-4 shrink-0" />
-                       Chat with Owner
-                     </button>
-                   )}
+          {/* Chat with Owner — only for user panel */}
+          {userPanel && (
+            <button
+              disabled={!ownerId || !hostelId}
+              onClick={() => navigate(`/user/messages/${hostelId}/${ownerId}?isSidePanel=true`)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl
+                         bg-purple-600 text-white text-sm font-semibold
+                         hover:bg-purple-700 transition-all duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         whitespace-nowrap"
+            >
+              <MessageCircle className="w-4 h-4 shrink-0" />
+              Chat with Owner
+            </button>
+          )}
         </div>
       </div>
     </div>
