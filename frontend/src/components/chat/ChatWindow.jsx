@@ -212,7 +212,7 @@ export default function ChatWindow({ conversation, onBack }) {
 
   return (
     <section
-      className="flex flex-col h-full w-full"
+      className="flex flex-col h-full w-full overflow-hidden"
       style={{ backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
     >
       {/* ══════════════════════ HEADER ══════════════════════ */}
@@ -242,7 +242,7 @@ export default function ChatWindow({ conversation, onBack }) {
 
         {/* Name + online status */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">
+          <p className="font-semibold text-gray-900 text-[16px] leading-tight truncate">
             {otherUser?.name || "User"}
           </p>
           {contactStatus.isOnline ? (
@@ -359,7 +359,7 @@ export default function ChatWindow({ conversation, onBack }) {
       )}
 
       {/* ══════════════════════ MESSAGES ══════════════════════ */}
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
         {messages.length > 0 ? (
           messages.map((msg) => (
             <div id={`msg-${msg._id}`} key={msg._id || Math.random()}>

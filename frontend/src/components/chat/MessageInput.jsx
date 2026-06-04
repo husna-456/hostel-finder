@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSocketContext } from "../../context/SocketContext";
 import { getUserId } from "../../utils/auth";
 import { RiSendPlaneFill } from "react-icons/ri";
-import { Smile, FileText, Image, Mic, BarChart2, X } from "lucide-react";
+import { Plus, Smile, FileText, Image, Mic, BarChart2, X } from "lucide-react";
 import { toast } from "react-toastify";
 
 const EMOJIS = [
@@ -28,10 +28,10 @@ export default function MessageInput({ conversationId, onSend }) {
   const [showAttach, setShowAttach] = useState(false);
 
   const typingRef     = useRef(null);
-  const emojiWrapRef  = useRef(null); // wraps emoji btn + picker
-  const attachWrapRef = useRef(null); // wraps + btn + attach menu
+  const emojiWrapRef  = useRef(null);
+  const attachWrapRef = useRef(null);
 
-  /* close on outside click */
+  /* close popups on outside click */
   useEffect(() => {
     const h = (e) => {
       if (emojiWrapRef.current  && !emojiWrapRef.current.contains(e.target))  setShowEmoji(false);
@@ -46,13 +46,19 @@ export default function MessageInput({ conversationId, onSend }) {
     if (!socket || !e.target.value.trim()) return;
     socket.emit("typing", { conversationId });
     clearTimeout(typingRef.current);
-    typingRef.current = setTimeout(() => socket.emit("stop_typing", { conversationId }), 3000);
+    typingRef.current = setTimeout(
+      () => socket.emit("stop_typing", { conversationId }),
+      3000
+    );
   };
 
   const send = () => {
     if (!text.trim() || !socket) return;
     const tempId = `temp_${Date.now()}`;
-    onSend({ _id: tempId, message: text, senderId: currentUserId, conversationId, createdAt: new Date(), status: "sent" });
+    onSend({
+      _id: tempId, message: text, senderId: currentUserId,
+      conversationId, createdAt: new Date(), status: "sent",
+    });
     clearTimeout(typingRef.current);
     socket.emit("stop_typing",  { conversationId });
     socket.emit("send_message", { conversationId, text, tempId });
@@ -65,25 +71,28 @@ export default function MessageInput({ conversationId, onSend }) {
   };
 
   return (
-    <div className="w-full px-3 py-3 bg-transparent shrink-0">
-      <div className="relative flex items-end gap-2">
+    /* White bar at the bottom — no transparent gap, no wallpaper bleed */
+    <div className="w-full px-3 py-2 bg-white border-t border-gray-100 shrink-0">
+      <div className="flex items-center gap-2">
 
-        {/* ── + Attachment button + menu ── */}
+        {/* ── + Attachment ── */}
         <div ref={attachWrapRef} className="relative shrink-0">
           <button
             type="button"
             onClick={() => { setShowAttach((p) => !p); setShowEmoji(false); }}
-            className="w-10 h-10 flex items-center justify-center bg-[#D9F2ED] hover:bg-[#c8eae3] rounded-full text-[#01AA85] text-xl font-bold transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
             aria-label="Attach"
           >
-            +
+            <Plus size={20} />
           </button>
 
           {showAttach && (
             <div className="absolute bottom-12 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-52">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Attach</span>
-                <button onClick={() => setShowAttach(false)} className="text-gray-400 hover:text-gray-600"><X size={13} /></button>
+                <button onClick={() => setShowAttach(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={13} />
+                </button>
               </div>
               <div className="space-y-1">
                 {ATTACHMENTS.map(({ label, icon: Icon, color, bg }) => (
@@ -101,63 +110,62 @@ export default function MessageInput({ conversationId, onSend }) {
           )}
         </div>
 
-        {/* ── Message form ── */}
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex-1 flex items-end gap-2 bg-white rounded-2xl px-3 py-2 shadow-sm border border-gray-100"
-        >
-          {/* Emoji button + picker */}
-          <div ref={emojiWrapRef} className="relative shrink-0 self-end mb-0.5">
-            <button
-              type="button"
-              onClick={() => { setShowEmoji((p) => !p); setShowAttach(false); }}
-              className="text-gray-400 hover:text-yellow-500 transition-colors"
-              aria-label="Emoji"
-            >
-              <Smile size={20} />
-            </button>
-
-            {showEmoji && (
-              <div className="absolute bottom-9 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-72">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Emoji</span>
-                  <button onClick={() => setShowEmoji(false)} className="text-gray-400 hover:text-gray-600"><X size={13} /></button>
-                </div>
-                <div className="grid grid-cols-8 gap-0.5">
-                  {EMOJIS.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => { setText((p) => p + e); setShowEmoji(false); }}
-                      className="text-xl hover:bg-gray-100 rounded-lg p-1 transition-colors leading-none"
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Textarea */}
-          <textarea
-            rows={1}
-            value={text}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent outline-none text-[15px] text-[#2A3D39] resize-none leading-tight max-h-24 overflow-y-auto placeholder-gray-400"
-            placeholder="Write your message…"
-          />
-
-          {/* Send button */}
+        {/* ── Emoji ── */}
+        <div ref={emojiWrapRef} className="relative shrink-0">
           <button
             type="button"
-            onClick={send}
-            className="w-9 h-9 flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors shrink-0 self-end"
-            aria-label="Send"
+            onClick={() => { setShowEmoji((p) => !p); setShowAttach(false); }}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 hover:text-yellow-500 transition-colors"
+            aria-label="Emoji"
           >
-            <RiSendPlaneFill size={15} />
+            <Smile size={20} />
           </button>
-        </form>
+
+          {showEmoji && (
+            <div className="absolute bottom-12 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-72">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Emoji</span>
+                <button onClick={() => setShowEmoji(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="grid grid-cols-8 gap-0.5">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => { setText((p) => p + e); setShowEmoji(false); }}
+                    className="text-xl hover:bg-gray-100 rounded-lg p-1 transition-colors leading-none"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Text input (rounded-full, gray bg) ── */}
+        <textarea
+          rows={1}
+          value={text}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 outline-none text-[15px] text-gray-900
+                     resize-none leading-tight max-h-24 overflow-y-auto placeholder-gray-400"
+          placeholder="Write your message…"
+        />
+
+        {/* ── Send button ── */}
+        <button
+          type="button"
+          onClick={send}
+          className="w-9 h-9 flex items-center justify-center bg-purple-600 hover:bg-purple-700
+                     text-white rounded-full transition-colors shrink-0"
+          aria-label="Send"
+        >
+          <RiSendPlaneFill size={15} />
+        </button>
+
       </div>
     </div>
   );
