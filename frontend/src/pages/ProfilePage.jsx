@@ -4,9 +4,11 @@ import { toast } from "react-toastify";
 import { FaCamera, FaLock, FaUser, FaEnvelope, FaEye, FaEyeSlash, FaSave } from "react-icons/fa";
 import { fetchClient } from "../api/fetchClient";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProfilePage() {
   const fileInputRef = useRef(null);
+  const { updateUser } = useAuth();
 
   const [user,           setUser]           = useState(null);
   const [loading,        setLoading]        = useState(true);
@@ -64,9 +66,8 @@ export default function ProfilePage() {
         method: "PUT",
         body: JSON.stringify({ name: name.trim(), email: email.trim(), profilePicture }),
       });
-      const stored = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem("user", JSON.stringify({ ...stored, name: updated.name, email: updated.email }));
       setUser(updated);
+      updateUser({ name: updated.name, email: updated.email, profilePicture: updated.profilePicture || "" });
       toast.success("Profile updated!");
     } catch (err) {
       toast.error(err.message || "Failed to save profile");

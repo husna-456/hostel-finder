@@ -5,23 +5,40 @@ import EmptyChatState from "../components/chat/EmptyChatState";
 
 export default function OwnerChat() {
   const [activeConversation, setActiveConversation] = useState(null);
-console.log("ACTIVE CONVERSATION:", activeConversation);
+  const [mobileView,         setMobileView]         = useState("list");
+
+  const handleSelect = (conv) => {
+    setActiveConversation(conv);
+    setMobileView("chat");
+  };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* LEFT — Conversations */}
-      <ChatList
-        activeConversationId={activeConversation?._id}
-        onSelect={setActiveConversation}
-        mode="hostel_owner"   // 👈 important
-      />
+    <div className="flex overflow-hidden -mx-4 -mt-4 md:-mx-6 md:-mt-6" style={{ height: "100dvh" }}>
+      {/* ── Conversation list ── */}
+      <div
+        className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
+          ${mobileView === "chat" ? "hidden md:flex" : "flex"}`}
+      >
+        <ChatList
+          activeConversationId={activeConversation?._id}
+          onSelect={handleSelect}
+        />
+      </div>
 
-      {/* RIGHT — Chat Window */}
-      {activeConversation ? (
-        <ChatWindow conversation={activeConversation} />
-      ) : (
+      {/* ── Chat window ── */}
+      <div
+        className={`flex-1 flex-col
+          ${mobileView === "list" ? "hidden md:flex" : "flex"}`}
+      >
+        {activeConversation ? (
+          <ChatWindow
+            conversation={activeConversation}
+            onBack={() => setMobileView("list")}
+          />
+        ) : (
           <EmptyChatState />
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -18,13 +18,13 @@ const navItems = [
 
 export default function UserSidebar({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [menuPos,      setMenuPos]      = useState({ bottom: 0, left: 0, width: 180 });
 
-  const user    = JSON.parse(localStorage.getItem("user") || "{}");
   const name    = user?.name  || "User";
   const initial = name.charAt(0).toUpperCase();
+  const avatar  = user?.profilePicture;
 
   useEffect(() => {
     const close = () => setShowDropdown(false);
@@ -52,7 +52,6 @@ export default function UserSidebar({ isOpen, setIsOpen }) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsOpen(false)} />
       )}
@@ -60,8 +59,6 @@ export default function UserSidebar({ isOpen, setIsOpen }) {
       <aside className={`flex flex-col justify-between bg-white border-r border-gray-200 shadow-sm transition-all duration-300 fixed top-0 left-0 h-screen z-50 overflow-y-auto ${
         isOpen ? "w-60" : "w-0 md:w-16"
       }`}>
-
-        {/* Top bar */}
         <div>
           <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
             {isOpen && <span className="font-bold text-gray-800 text-base">User Panel</span>}
@@ -96,9 +93,13 @@ export default function UserSidebar({ isOpen, setIsOpen }) {
             onClick={openDropdown}
             className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition"
           >
-            <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-              {initial}
-            </div>
+            {avatar ? (
+              <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0 border-2 border-purple-100" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                {initial}
+              </div>
+            )}
             {isOpen && (
               <>
                 <div className="flex flex-col text-left overflow-hidden flex-1">
@@ -112,7 +113,6 @@ export default function UserSidebar({ isOpen, setIsOpen }) {
         </div>
       </aside>
 
-      {/* Portal dropdown */}
       {showDropdown && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setShowDropdown(false)} />

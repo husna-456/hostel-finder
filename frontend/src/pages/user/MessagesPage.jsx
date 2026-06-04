@@ -6,46 +6,62 @@ import ChatList from "../../components/chat/ChatList";
 import ChatWindow from "../../components/chat/ChatWindow";
 import EmptyChatState from "../../components/chat/EmptyChatState";
 
-
-
 export default function MessagesPage() {
   const { hostelId, ownerId } = useParams();
-  const [searchParams] = useSearchParams();
-  const isSidePanel = searchParams.get("isSidePanel");
-  const [conversation, setConversation] = useState(null);
+  const [searchParams]   = useSearchParams();
+  const isSidePanel      = searchParams.get("isSidePanel");
 
-  // 🔥 OPTION-B: chat open → conversation create
+  const [conversation, setConversation] = useState(null);
+  const [mobileView,   setMobileView]   = useState("list"); // "list" | "chat"
+
+  // When coming from a hostel card, jump straight to chat view
+  useEffect(() => {
+    if (isSidePanel) setMobileView("chat");
+  }, [isSidePanel]);
+
+  // Auto-create conversation from URL params
   useEffect(() => {
     if (hostelId && ownerId) {
-      (async () => {
-        const conv = await createConversation({ hostelId, ownerId });
+      createConversation({ hostelId, ownerId }).then((conv) => {
         setConversation(conv);
-      })();
+        setMobileView("chat");
+      });
     }
   }, [hostelId, ownerId]);
 
-
-  // ✅ jab chat list se click ho
   const handleSelect = (chat) => {
-    setConversation(chat); // 🔥 bas itna hi
+    setConversation(chat);
+    setMobileView("chat");
   };
 
-
   return (
-    <div className="flex h-screen bg-gray-50 ">
-      {/* LEFT – Conversation list */}
-      <ChatList
-        activeConversationId={conversation?._id}
-        onSelect={handleSelect}
-        isSidePanel={isSidePanel}
-      />
+    <div className="flex overflow-hidden -mx-4 -mt-16 md:-mx-6 md:-mt-6" style={{ height: "100dvh" }}>
+      {/* ── Conversation list ── */}
+      <div
+        className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
+          ${mobileView === "chat" ? "hidden md:flex" : "flex"}`}
+      >
+        <ChatList
+          activeConversationId={conversation?._id}
+          onSelect={handleSelect}
+          isSidePanel={isSidePanel}
+        />
+      </div>
 
-      {/* RIGHT – Chat window */}
-      {conversation ? (
-        <ChatWindow conversation={conversation} />
-      ) : (
-        <EmptyChatState />
-      )}
+      {/* ── Chat window ── */}
+      <div
+        className={`flex-1 flex-col
+          ${mobileView === "list" ? "hidden md:flex" : "flex"}`}
+      >
+        {conversation ? (
+          <ChatWindow
+            conversation={conversation}
+            onBack={() => setMobileView("list")}
+          />
+        ) : (
+          <EmptyChatState />
+        )}
+      </div>
     </div>
   );
 }
