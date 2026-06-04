@@ -87,34 +87,41 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
 
         <div className="flex-1" />
 
-        {/* Buttons — full width, never cut */}
-        <div className="flex gap-2 pt-2">
+        {/* Buttons */}
+        <div className="flex gap-2 mt-3 w-full">
           <button
             onClick={() => {
               if (onClick) onClick();
               else navigate(hostelLink);
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl
-                       border-2 border-purple-600 text-purple-600 text-sm font-semibold
-                       hover:bg-purple-600 hover:text-white transition-all duration-200
-                       whitespace-nowrap"
+            className="flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap
+                       h-10 md:h-auto md:py-2.5
+                       rounded-lg md:rounded-xl
+                       border border-purple-600 md:border-2
+                       bg-white text-purple-600
+                       text-sm font-medium md:font-semibold
+                       hover:bg-purple-50 md:hover:bg-purple-600 md:hover:text-white
+                       transition-colors duration-200"
           >
-            <Eye className="w-4 h-4 shrink-0" />
+            <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
             View Details
           </button>
 
-          {/* Chat with Owner — only for user panel */}
+          {/* Chat with Owner — user panel only */}
           {userPanel && (
             <button
               disabled={!ownerId || !hostelId}
               onClick={() => navigate(`/user/messages/${hostelId}/${ownerId}?isSidePanel=true`)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl
-                         bg-purple-600 text-white text-sm font-semibold
-                         hover:bg-purple-700 transition-all duration-200
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         whitespace-nowrap"
+              className="flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap
+                         h-10 md:h-auto md:py-2.5
+                         rounded-lg md:rounded-xl
+                         bg-purple-600 text-white
+                         text-sm font-medium md:font-semibold
+                         hover:bg-purple-700
+                         transition-colors duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <MessageCircle className="w-4 h-4 shrink-0" />
+              <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
               Chat with Owner
             </button>
           )}
