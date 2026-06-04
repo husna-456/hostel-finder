@@ -94,8 +94,8 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
               if (onClick) onClick();
               else navigate(hostelLink);
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap
-                       h-10 md:h-auto md:py-2.5
+            className="w-[85%] mx-auto sm:flex-1 sm:w-auto sm:mx-0 flex items-center justify-center gap-1.5 whitespace-nowrap
+                       h-9 md:h-auto md:py-2.5
                        rounded-lg md:rounded-xl
                        border border-purple-600 md:border-2
                        bg-white text-purple-600
@@ -112,8 +112,8 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
             <button
               disabled={!ownerId || !hostelId}
               onClick={() => navigate(`/user/messages/${hostelId}/${ownerId}?isSidePanel=true`)}
-              className="flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap
-                         h-10 md:h-auto md:py-2.5
+              className="w-[85%] mx-auto sm:flex-1 sm:w-auto sm:mx-0 flex items-center justify-center gap-1.5 whitespace-nowrap
+                         h-9 md:h-auto md:py-2.5
                          rounded-lg md:rounded-xl
                          border border-purple-600 md:border-2
                          bg-purple-600 text-white
