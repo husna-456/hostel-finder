@@ -13,7 +13,7 @@ export default function OwnerLayout() {
       {/* Content — on mobile no margin (sidebar is overlay); on desktop shift right */}
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "md:ml-80" : "md:ml-20"
+          sidebarOpen ? "md:ml-60" : "md:ml-16"
         }`}
       >
         {/* Mobile top bar with hamburger */}

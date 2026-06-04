@@ -28,7 +28,7 @@ export default function UserLayout() {
 
       <div
         className={`transition-all duration-300 ${
-          sidebarOpen ? "ml-0 md:ml-80" : "ml-0 md:ml-20"
+          sidebarOpen ? "ml-0 md:ml-60" : "ml-0 md:ml-16"
         }`}
       >
         <main className="p-4 md:p-6 pt-16 md:pt-6">
