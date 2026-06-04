@@ -12,14 +12,12 @@ export default function MessagesPage() {
   const isSidePanel      = searchParams.get("isSidePanel");
 
   const [conversation, setConversation] = useState(null);
-  const [mobileView,   setMobileView]   = useState("list"); // "list" | "chat"
+  const [mobileView,   setMobileView]   = useState("list");
 
-  // When coming from a hostel card, jump straight to chat view
   useEffect(() => {
     if (isSidePanel) setMobileView("chat");
   }, [isSidePanel]);
 
-  // Auto-create conversation from URL params
   useEffect(() => {
     if (hostelId && ownerId) {
       createConversation({ hostelId, ownerId }).then((conv) => {
@@ -35,7 +33,16 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="flex overflow-hidden -mx-4 -mt-16 md:-mx-6 md:-mt-6" style={{ height: "100dvh" }}>
+    /*
+     * UserLayout/main has:  pt-16 p-4 on mobile  →  total vertical = 80px = 5rem
+     *                       p-6 on desktop        →  total vertical = 48px = 3rem
+     * Height = 100vh minus those values so the chat fills the area without overflow.
+     * No negative margins — the parent's padding provides proper edge spacing.
+     */
+    <div
+      className="flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm
+                 h-[calc(100vh-5rem)] md:h-[calc(100vh-3rem)]"
+    >
       {/* ── Conversation list ── */}
       <div
         className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
