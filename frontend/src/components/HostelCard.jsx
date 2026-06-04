@@ -88,7 +88,7 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
         <div className="flex-1" />
 
         {/* Buttons */}
-        <div className="flex gap-2 mt-3 w-full">
+        <div className={`mt-3 w-full ${userPanel ? "flex flex-col sm:flex-row gap-2" : "flex gap-2"}`}>
           <button
             onClick={() => {
               if (onClick) onClick();
@@ -115,9 +115,10 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
               className="flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap
                          h-10 md:h-auto md:py-2.5
                          rounded-lg md:rounded-xl
+                         border border-purple-600 md:border-2
                          bg-purple-600 text-white
                          text-sm font-medium md:font-semibold
-                         hover:bg-purple-700
+                         hover:bg-purple-700 hover:border-purple-700
                          transition-colors duration-200
                          disabled:opacity-50 disabled:cursor-not-allowed"
             >
