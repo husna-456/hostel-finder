@@ -1,28 +1,5 @@
 import clsx from "clsx";
 
-function formatLastSeen(lastSeen) {
-  if (!lastSeen) return "";
-  const date    = new Date(lastSeen);
-  const now     = new Date();
-  const diffMs  = now - date;
-  const diffMin = Math.floor(diffMs / 60000);
-
-  if (diffMin < 1)  return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) {
-    const t = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    return `today at ${t}`;
-  }
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return "yesterday";
-
-  return date.toLocaleDateString();
-}
-
 export default function ChatListItem({ conversation, active, onClick, isOnline, lastSeen }) {
   const otherUser = conversation.clientId?.name
     ? conversation.clientId
@@ -81,15 +58,6 @@ export default function ChatListItem({ conversation, active, onClick, isOnline, 
           )}
         </div>
 
-        {/* Last seen */}
-        {!isOnline && lastSeen && (
-          <p className="text-[10px] text-gray-400 mt-0.5">
-            Last seen {formatLastSeen(lastSeen)}
-          </p>
-        )}
-        {isOnline && (
-          <p className="text-[10px] text-green-500 font-medium mt-0.5">Online</p>
-        )}
       </div>
     </div>
   );
