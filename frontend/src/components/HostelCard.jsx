@@ -50,21 +50,21 @@ export default function HostelCard({ hostel, userPanel = false, onClick }) {
 
         {/* Name */}
         <Link to={hostelLink}>
-          <h2 className="text-base font-bold text-gray-800 hover:text-purple-600 transition-colors leading-snug line-clamp-1">
+          <h2 className={`${userPanel ? "text-lg" : "text-base"} font-bold text-gray-800 hover:text-purple-600 transition-colors leading-snug line-clamp-1`}>
             {hostel?.name}
           </h2>
         </Link>
 
         {/* Price */}
         <div>
-          <span className="text-lg font-extrabold text-gray-900">
+          <span className={userPanel ? "text-xl font-bold text-purple-600" : "text-lg font-extrabold text-gray-900"}>
             PKR {typeof price === "number" ? price.toLocaleString() : price}
           </span>
           <span className="text-xs text-gray-400 ml-1">/ month</span>
         </div>
 
         {/* Location */}
-        <div className="flex items-start text-gray-500 text-xs gap-1">
+        <div className={`flex items-start text-gray-500 gap-1 ${userPanel ? "text-sm" : "text-xs"}`}>
           <FaMapMarkerAlt className="text-purple-500 shrink-0 mt-0.5" />
           <span className="line-clamp-2 leading-tight">
             {hostel?.location?.area || hostel?.address || "Location not available"}
