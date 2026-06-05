@@ -52,9 +52,19 @@ export const initSocket = (server) => {
             io.to(sid).emit("messages_seen", { conversationId, seenBy: userId });
           });
         }
+
+        await Conversation.findByIdAndUpdate(conversationId, {
+          $set: { [`unreadCounts.${userId}`]: 0 },
+        });
+        io.to(userId).emit("unread_count_update", { conversationId, unreadCount: 0 });
       } catch (err) {
         console.error("mark seen error:", err.message);
       }
+    });
+
+    // ── LEAVE CONVERSATION ─────────────────────────────────────────────────────
+    socket.on("leave_conversation", (conversationId) => {
+      socket.leave(conversationId);
     });
 
     // ── SEND MESSAGE ───────────────────────────────────────────────────────────
@@ -84,8 +94,21 @@ export const initSocket = (server) => {
           status: "sent",
         });
 
-        convo.lastMessage = text;
-        await convo.save();
+        const convRoom = io.sockets.adapter.rooms.get(conversationId);
+        const receiverIsViewing = convRoom && [...convRoom].some(sid => {
+          const s = io.sockets.sockets.get(sid);
+          return s && s.user.id === receiverId;
+        });
+
+        const updateData = { lastMessage: text };
+        if (!receiverIsViewing) {
+          updateData.$inc = { [`unreadCounts.${receiverId}`]: 1 };
+        }
+        const updatedConvo = await Conversation.findByIdAndUpdate(
+          conversationId,
+          updateData,
+          { new: true }
+        );
 
         // Ack to sender so temp message is replaced with real DB record
         io.to(senderId).emit("message_ack", { ...message.toObject(), tempId });
@@ -110,6 +133,20 @@ export const initSocket = (server) => {
         } else {
           io.to(receiverId).emit("receive_message", message.toObject());
         }
+
+        if (!receiverIsViewing) {
+          const newCount = updatedConvo.unreadCounts?.get?.(receiverId) || 0;
+          io.to(receiverId).emit("unread_count_update", {
+            conversationId,
+            unreadCount: newCount,
+            lastMessage: text,
+          });
+        }
+        io.to(senderId).emit("unread_count_update", {
+          conversationId,
+          unreadCount: 0,
+          lastMessage: text,
+        });
       } catch (err) {
         console.error("send_message error:", err.message);
       }

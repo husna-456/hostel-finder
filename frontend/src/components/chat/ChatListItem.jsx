@@ -36,7 +36,7 @@ export default function ChatListItem({ conversation, active, onClick, isOnline }
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold text-[15px] text-gray-900 truncate">
+          <span className={clsx("text-[15px] text-gray-900 truncate", conversation.unreadCount > 0 ? "font-bold" : "font-semibold")}>
             {otherUser?.name || "User"}
           </span>
           <span className="text-xs text-gray-400 shrink-0">
@@ -47,11 +47,11 @@ export default function ChatListItem({ conversation, active, onClick, isOnline }
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className="text-sm text-gray-500 truncate">
+          <p className={clsx("text-sm truncate", conversation.unreadCount > 0 ? "text-gray-800 font-medium" : "text-gray-500")}>
             {conversation.lastMessage || "Start a conversation"}
           </p>
           {conversation.unreadCount > 0 && (
-            <span className="bg-purple-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full shrink-0 font-medium">
+            <span className="bg-green-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full shrink-0 font-medium">
               {conversation.unreadCount}
             </span>
           )}

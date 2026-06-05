@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { getUserConversations } from "../../api/conversation.api";
+import { getUserConversations, markAllRead, archiveAllConversations, unarchiveAllConversations } from "../../api/conversation.api";
+import { fetchClient } from "../../api/fetchClient";
 import ChatListItem from "./ChatListItem";
 import { getUserId, getUserRole } from "../../utils/auth";
 import { useSocketContext } from "../../context/SocketContext";
@@ -12,11 +13,15 @@ export default function ChatList({ activeConversationId, onSelect }) {
   const [searchQuery,   setSearchQuery]   = useState("");
   const [onlineMap,     setOnlineMap]     = useState({});
   const [menuOpen,      setMenuOpen]      = useState(false);
+  const [showArchived,  setShowArchived]  = useState(false);
 
   const userId      = getUserId();
   const role        = getUserRole();
   const socket      = useSocketContext();
   const menuRef     = useRef(null);
+  const activeConvRef = useRef(activeConversationId);
+
+  useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
 
   /* load conversations */
   useEffect(() => {
@@ -24,6 +29,26 @@ export default function ChatList({ activeConversationId, onSelect }) {
       .then(setConversations)
       .catch(() => setConversations([]));
   }, [role, userId]);
+
+  /* real-time unread count updates */
+  useEffect(() => {
+    if (!socket) return;
+    const onUnreadUpdate = ({ conversationId, unreadCount, lastMessage }) => {
+      setConversations(prev =>
+        prev.map(c =>
+          c._id === conversationId
+            ? {
+                ...c,
+                unreadCount: c._id === activeConvRef.current ? 0 : unreadCount,
+                ...(lastMessage !== undefined && { lastMessage }),
+              }
+            : c
+        ).sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))
+      );
+    };
+    socket.on("unread_count_update", onUnreadUpdate);
+    return () => socket.off("unread_count_update", onUnreadUpdate);
+  }, [socket]);
 
   /* real-time online status */
   useEffect(() => {
@@ -51,8 +76,79 @@ export default function ChatList({ activeConversationId, onSelect }) {
     return name.includes(q) || last.includes(q);
   });
 
+  const activeConversations   = filtered.filter(c => !c.isArchived);
+  const archivedConversations = filtered.filter(c => c.isArchived);
+
   const getOtherUser = (conv) =>
     role === "hostel_owner" ? conv.clientId : conv.ownerId;
+
+  const handleSelect = (conv) => {
+    setConversations(prev =>
+      prev.map(c => c._id === conv._id ? { ...c, unreadCount: 0 } : c)
+    );
+    onSelect(conv);
+  };
+
+  const handleMarkAllRead = async () => {
+    setMenuOpen(false);
+    try {
+      await markAllRead();
+      setConversations(prev => prev.map(c => ({ ...c, unreadCount: 0 })));
+      toast.success("All chats marked as read");
+    } catch {
+      toast.error("Failed to mark as read");
+    }
+  };
+
+  const handleMuteNotifications = () => {
+    setMenuOpen(false);
+    const current = localStorage.getItem("chat_notifications_muted") === "true";
+    localStorage.setItem("chat_notifications_muted", String(!current));
+    toast.success(current ? "Notifications unmuted" : "Notifications muted");
+  };
+
+  const handleArchiveChats = () => {
+    setMenuOpen(false);
+    if (showArchived) {
+      Swal.fire({
+        title: "Unarchive all chats?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#7c3aed",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Unarchive all",
+      }).then(async ({ isConfirmed }) => {
+        if (!isConfirmed) return;
+        try {
+          await unarchiveAllConversations();
+          setConversations(prev => prev.map(c => ({ ...c, isArchived: false })));
+          setShowArchived(false);
+          toast.success("All chats unarchived");
+        } catch {
+          toast.error("Failed to unarchive");
+        }
+      });
+    } else {
+      Swal.fire({
+        title: "Archive all chats?",
+        text: "Chats will be hidden from your main list.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#7c3aed",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Archive all",
+      }).then(async ({ isConfirmed }) => {
+        if (!isConfirmed) return;
+        try {
+          await archiveAllConversations();
+          setConversations(prev => prev.map(c => ({ ...c, isArchived: true })));
+          toast.success("All chats archived");
+        } catch {
+          toast.error("Failed to archive");
+        }
+      });
+    }
+  };
 
   const handleClearAll = () => {
     setMenuOpen(false);
@@ -94,25 +190,25 @@ export default function ChatList({ activeConversationId, onSelect }) {
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden z-50 py-1">
               <button
-                onClick={() => { setMenuOpen(false); toast.success("All chats marked as read"); }}
+                onClick={handleMarkAllRead}
                 className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <CheckCheck size={15} className="text-green-500 shrink-0" />
                 Mark all as read
               </button>
               <button
-                onClick={() => { setMenuOpen(false); toast.info("Notifications muted"); }}
+                onClick={handleMuteNotifications}
                 className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <BellOff size={15} className="text-yellow-500 shrink-0" />
                 Mute notifications
               </button>
               <button
-                onClick={() => { setMenuOpen(false); toast.info("Chats archived"); }}
+                onClick={handleArchiveChats}
                 className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Archive size={15} className="text-blue-500 shrink-0" />
-                Archive chats
+                {showArchived ? "Unarchive chats" : "Archive chats"}
               </button>
               <div className="border-t border-gray-100 my-1" />
               <button
@@ -143,8 +239,8 @@ export default function ChatList({ activeConversationId, onSelect }) {
 
       {/* ── List ── */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {filtered.length > 0 ? (
-          filtered.map((c) => {
+        {activeConversations.length > 0 ? (
+          activeConversations.map((c) => {
             const other  = getOtherUser(c);
             const uid    = other?._id?.toString();
             const status = onlineMap[uid] ?? {
@@ -156,7 +252,7 @@ export default function ChatList({ activeConversationId, onSelect }) {
                 key={c._id}
                 conversation={c}
                 active={c._id === activeConversationId}
-                onClick={() => onSelect(c)}
+                onClick={() => handleSelect(c)}
                 isOnline={status.isOnline}
                 lastSeen={status.lastSeen}
               />
@@ -166,6 +262,36 @@ export default function ChatList({ activeConversationId, onSelect }) {
           <p className="p-4 text-sm text-gray-400">
             {searchQuery ? "No results" : "No conversations yet"}
           </p>
+        )}
+
+        {archivedConversations.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowArchived(p => !p)}
+              className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 border-t border-gray-100 transition-colors"
+            >
+              <Archive size={14} className="shrink-0" />
+              Archived ({archivedConversations.length})
+            </button>
+            {showArchived && archivedConversations.map((c) => {
+              const other  = getOtherUser(c);
+              const uid    = other?._id?.toString();
+              const status = onlineMap[uid] ?? {
+                isOnline: other?.isOnline || false,
+                lastSeen: other?.lastSeen || null,
+              };
+              return (
+                <ChatListItem
+                  key={c._id}
+                  conversation={c}
+                  active={c._id === activeConversationId}
+                  onClick={() => handleSelect(c)}
+                  isOnline={status.isOnline}
+                  lastSeen={status.lastSeen}
+                />
+              );
+            })}
+          </>
         )}
       </div>
     </section>

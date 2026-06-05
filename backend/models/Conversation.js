@@ -20,9 +20,18 @@ const conversationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-     lastMessage: {
-      type: String,   // 🔥 CHAT LIST KE LIYE
+    lastMessage: {
+      type: String,
     },
+    unreadCounts: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+    archivedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
   },
   { timestamps: true }
 );

@@ -1,21 +1,25 @@
 // routes/conversation.routes.js
 import express from "express";
 import {
-  getOrCreateConversation ,
+  getOrCreateConversation,
   getUserConversations,
   getOwnerConversations,
+  markAllRead,
+  archiveAll,
+  unarchiveAll,
 } from "../controllers/conversation.controller.js";
 import {protect} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✔️ MATCHES FRONTEND
-router.post("/", protect, getOrCreateConversation );
+router.post("/mark-all-read", protect, markAllRead);
+router.post("/archive-all", protect, archiveAll);
+router.post("/unarchive-all", protect, unarchiveAll);
 
-// ✔️ User inbox (client)
+router.post("/", protect, getOrCreateConversation);
+
 router.get("/user", protect, getUserConversations);
 
-// ✔️ Owner inbox
 router.get("/owner/:ownerId", protect, getOwnerConversations);
 
 export default router;
