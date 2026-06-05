@@ -13,7 +13,7 @@ export default function OwnerChat() {
   };
 
   return (
-    <div className="flex h-full overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+    <div className="flex h-full md:h-[calc(100vh-1.5rem)] overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
       {/* ── Conversation list ── */}
       <div
         className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
