@@ -38,6 +38,44 @@ export const adminCreateUser = async (req, res) => {
   }
 };
 
+// ── EDIT USER PROFILE (name + email, any role) ───────────────────────────────
+export const adminEditUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    if (!name && !email) return res.status(400).json({ message: "Provide name or email to update" });
+
+    const updates = {};
+    if (name)  updates.name  = name.trim();
+    if (email) updates.email = email.toLowerCase().trim();
+
+    if (email) {
+      const conflict = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.params.id } });
+      if (conflict) return res.status(400).json({ message: "Email already in use by another account" });
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "Profile updated", user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// ── RESET USER PASSWORD (any role) ───────────────────────────────────────────
+export const adminResetPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await User.findByIdAndUpdate(req.params.id, { password: hashed }, { new: true }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 // ── CHANGE USER ROLE ─────────────────────────────────────────────────────────
 export const changeUserRole = async (req, res) => {
   try {
