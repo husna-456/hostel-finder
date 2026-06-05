@@ -75,7 +75,7 @@ export default function MessageInput({ conversationId, onSend }) {
      * pt-2 only — no bottom padding so the bar sits flush at the viewport
      * bottom with zero white strip below the input.
      */
-    <div className="w-full px-3 pt-2 pb-0 bg-white border-t border-gray-100 shrink-0">
+    <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0">
       <div className="flex items-center gap-2">
 
         {/*
