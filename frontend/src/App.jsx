@@ -213,9 +213,25 @@ function App() {
             <Route path="payment-success" element={<PaymentSuccessPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="chat" element={<MessagesPage />} />
-            <Route path="messages/:hostelId/:ownerId" element={<MessagesPage />} />
           </Route>
+
+          {/* 💬 User Chat — standalone full-screen (no sidebar/layout) */}
+          <Route
+            path="/user/chat"
+            element={
+              !isAuthenticated ? <Navigate to="/login" replace /> :
+              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
+              <MessagesPage />
+            }
+          />
+          <Route
+            path="/user/messages/:hostelId/:ownerId"
+            element={
+              !isAuthenticated ? <Navigate to="/login" replace /> :
+              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
+              <MessagesPage />
+            }
+          />
 
           {/* 🚫 Fallback */}
           <Route path="*" element={<Home />} />

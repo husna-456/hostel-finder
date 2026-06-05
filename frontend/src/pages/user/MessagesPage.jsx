@@ -32,7 +32,7 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="h-full flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+    <div className="w-screen h-screen flex overflow-hidden">
       {/* ── Conversation list — hidden entirely when opened as side panel ── */}
       {!isSidePanel && (
         <div
