@@ -9,7 +9,7 @@ import EmptyChatState from "../../components/chat/EmptyChatState";
 export default function MessagesPage() {
   const { hostelId, ownerId } = useParams();
   const [searchParams]   = useSearchParams();
-  const isSidePanel      = searchParams.get("isSidePanel");
+  const isSidePanel      = searchParams.get("isSidePanel") === "true";
 
   const [conversation, setConversation] = useState(null);
   // Open directly into chat window when launched from "Chat with Owner" (params present)
@@ -33,17 +33,18 @@ export default function MessagesPage() {
 
   return (
     <div className="h-full flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-      {/* ── Conversation list ── */}
-      <div
-        className={`h-full flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
-          ${mobileView === "chat" ? "hidden md:flex" : "flex"}`}
-      >
-        <ChatList
-          activeConversationId={conversation?._id}
-          onSelect={handleSelect}
-          isSidePanel={isSidePanel}
-        />
-      </div>
+      {/* ── Conversation list — hidden entirely when opened as side panel ── */}
+      {!isSidePanel && (
+        <div
+          className={`h-full flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
+            ${mobileView === "chat" ? "hidden md:flex" : "flex"}`}
+        >
+          <ChatList
+            activeConversationId={conversation?._id}
+            onSelect={handleSelect}
+          />
+        </div>
+      )}
 
       {/* ── Chat window ── */}
       <div
