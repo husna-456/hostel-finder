@@ -58,6 +58,21 @@ export default function ChatWindow({ conversation, onBack }) {
   const messagesEndRef = useRef(null);
   const menuRef        = useRef(null);
 
+  /* ── visual viewport height (fixes Android keyboard gap) ── */
+  useEffect(() => {
+    const setHeight = () => {
+      const vh = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--chat-height", vh + "px");
+    };
+    setHeight();
+    window.visualViewport?.addEventListener("resize", setHeight);
+    window.addEventListener("resize", setHeight);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", setHeight);
+      window.removeEventListener("resize", setHeight);
+    };
+  }, []);
+
   /* ── load messages ── */
   useEffect(() => {
     if (!conversation?._id) return;
@@ -213,7 +228,7 @@ export default function ChatWindow({ conversation, onBack }) {
   return (
     <section
       className="flex flex-col w-full overflow-hidden"
-      style={{ height: "100dvh", backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
+      style={{ height: "var(--chat-height, 100dvh)", backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
     >
       {/* ══════════════════════ HEADER ══════════════════════ */}
       <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0">
