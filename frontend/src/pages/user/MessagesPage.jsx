@@ -11,7 +11,8 @@ export default function MessagesPage() {
   const [searchParams]   = useSearchParams();
   const isSidePanel      = searchParams.get("isSidePanel") === "true";
 
-  const [conversation, setConversation] = useState(null);
+  const [conversation,  setConversation]  = useState(null);
+  const [loadingConv,   setLoadingConv]   = useState(!!(hostelId && ownerId));
   // Open directly into chat window when launched from "Chat with Owner" (params present)
   const [mobileView, setMobileView] = useState(
     (hostelId && ownerId) || isSidePanel ? "chat" : "list"
@@ -19,10 +20,13 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (hostelId && ownerId) {
-      createConversation({ hostelId, ownerId }).then((conv) => {
-        setConversation(conv);
-        setMobileView("chat");
-      });
+      setLoadingConv(true);
+      createConversation({ hostelId, ownerId })
+        .then((conv) => {
+          setConversation(conv);
+          setMobileView("chat");
+        })
+        .finally(() => setLoadingConv(false));
     }
   }, [hostelId, ownerId]);
 
@@ -51,7 +55,11 @@ export default function MessagesPage() {
         className={`flex-1 h-full flex-col overflow-hidden min-h-0
           ${mobileView === "list" ? "hidden md:flex" : "flex"}`}
       >
-        {conversation ? (
+        {loadingConv ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+          </div>
+        ) : conversation ? (
           <ChatWindow
             conversation={conversation}
             onBack={() => setMobileView("list")}
