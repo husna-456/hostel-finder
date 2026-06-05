@@ -34,6 +34,7 @@ export default function ChatList({ activeConversationId, onSelect }) {
   useEffect(() => {
     if (!socket) return;
     const onUnreadUpdate = ({ conversationId, unreadCount, lastMessage }) => {
+      const now = new Date().toISOString();
       setConversations(prev =>
         prev.map(c =>
           c._id === conversationId
@@ -41,9 +42,10 @@ export default function ChatList({ activeConversationId, onSelect }) {
                 ...c,
                 unreadCount: c._id === activeConvRef.current ? 0 : unreadCount,
                 ...(lastMessage !== undefined && { lastMessage }),
+                updatedAt: now,
               }
             : c
-        ).sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))
+        ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       );
     };
     socket.on("unread_count_update", onUnreadUpdate);

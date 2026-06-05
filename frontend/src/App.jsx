@@ -168,7 +168,11 @@ function App() {
           <Route
             path="/hostel_owner/*"
             element={
-              !isAuthenticated ? (
+              loading ? (
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+                </div>
+              ) : !isAuthenticated ? (
                 <Navigate to="/login" replace />
               ) : role !== ROLES.HOSTEL_OWNER ? (
                 <Navigate to="/unauthorized" replace />
@@ -193,7 +197,11 @@ function App() {
           <Route
             path="/user/*"
             element={
-              !isAuthenticated ? (
+              loading ? (
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+                </div>
+              ) : !isAuthenticated ? (
                 <Navigate to="/login" replace />
               ) : role !== ROLES.USER ? (
                 <Navigate to="/unauthorized" replace />
@@ -219,17 +227,17 @@ function App() {
           <Route
             path="/user/chat"
             element={
-              !isAuthenticated ? <Navigate to="/login" replace /> :
-              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
-              <MessagesPage />
+              <PrivateRoute allowedRoles={[ROLES.USER]}>
+                <MessagesPage />
+              </PrivateRoute>
             }
           />
           <Route
             path="/user/messages/:hostelId/:ownerId"
             element={
-              !isAuthenticated ? <Navigate to="/login" replace /> :
-              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
-              <MessagesPage />
+              <PrivateRoute allowedRoles={[ROLES.USER]}>
+                <MessagesPage />
+              </PrivateRoute>
             }
           />
 
