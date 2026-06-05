@@ -33,7 +33,7 @@ export default function OwnerChat() {
         {activeConversation ? (
           <ChatWindow
             conversation={activeConversation}
-            onBack={() => setMobileView("list")}
+            onBack={() => { setMobileView("list"); setActiveConversation(null); }}
           />
         ) : (
           <EmptyChatState />

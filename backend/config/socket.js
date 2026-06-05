@@ -67,6 +67,36 @@ export const initSocket = (server) => {
       socket.leave(conversationId);
     });
 
+    // ── MARK SEEN (fired when user clicks a conversation) ──────────────────────
+    socket.on("mark_seen", async ({ conversationId }) => {
+      try {
+        const unread = await Message.find({
+          conversationId,
+          receiverId: userId,
+          status: { $ne: "read" },
+        }).lean();
+
+        if (unread.length > 0) {
+          const now = new Date();
+          await Message.updateMany(
+            { conversationId, receiverId: userId, status: { $ne: "read" } },
+            { status: "read", seenAt: now }
+          );
+          const senderIds = [...new Set(unread.map((m) => m.senderId.toString()))];
+          senderIds.forEach((sid) => {
+            io.to(sid).emit("messages_seen", { conversationId, seenBy: userId });
+          });
+        }
+
+        await Conversation.findByIdAndUpdate(conversationId, {
+          $set: { [`unreadCounts.${userId}`]: 0 },
+        });
+        io.to(userId).emit("unread_count_update", { conversationId, unreadCount: 0 });
+      } catch (err) {
+        console.error("mark_seen error:", err.message);
+      }
+    });
+
     // ── SEND MESSAGE ───────────────────────────────────────────────────────────
     socket.on("send_message", async ({ conversationId, text, tempId }) => {
       try {

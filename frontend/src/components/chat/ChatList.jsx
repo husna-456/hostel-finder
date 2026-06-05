@@ -30,7 +30,31 @@ export default function ChatList({ activeConversationId, onSelect }) {
       .catch(() => setConversations([]));
   }, [role, userId]);
 
-  /* real-time unread count updates */
+  /* real-time: incoming message → badge increment + lastMessage + resort */
+  useEffect(() => {
+    if (!socket) return;
+    const onReceive = (msg) => {
+      setConversations(prev =>
+        prev.map(c =>
+          c._id === msg.conversationId
+            ? {
+                ...c,
+                lastMessage: msg.message,
+                updatedAt: msg.createdAt || new Date().toISOString(),
+                unreadCount:
+                  activeConvRef.current === msg.conversationId
+                    ? 0
+                    : (c.unreadCount || 0) + 1,
+              }
+            : c
+        ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      );
+    };
+    socket.on("receive_message", onReceive);
+    return () => socket.off("receive_message", onReceive);
+  }, [socket]);
+
+  /* real-time: badge reset (count=0 from join/mark_seen) + sender lastMessage sync */
   useEffect(() => {
     if (!socket) return;
     const onUnreadUpdate = ({ conversationId, unreadCount, lastMessage }) => {
@@ -40,7 +64,8 @@ export default function ChatList({ activeConversationId, onSelect }) {
           c._id === conversationId
             ? {
                 ...c,
-                unreadCount: c._id === activeConvRef.current ? 0 : unreadCount,
+                // badge: only apply when server says 0 (reset); increments come from receive_message
+                ...(unreadCount === 0 && { unreadCount: 0 }),
                 ...(lastMessage !== undefined && { lastMessage }),
                 updatedAt: now,
               }
@@ -85,9 +110,11 @@ export default function ChatList({ activeConversationId, onSelect }) {
     role === "hostel_owner" ? conv.clientId : conv.ownerId;
 
   const handleSelect = (conv) => {
+    activeConvRef.current = conv._id;
     setConversations(prev =>
       prev.map(c => c._id === conv._id ? { ...c, unreadCount: 0 } : c)
     );
+    socket?.emit("mark_seen", { conversationId: conv._id });
     onSelect(conv);
   };
 

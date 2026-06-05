@@ -62,7 +62,7 @@ export default function MessagesPage() {
         ) : conversation ? (
           <ChatWindow
             conversation={conversation}
-            onBack={() => setMobileView("list")}
+            onBack={() => { setMobileView("list"); setConversation(null); }}
           />
         ) : (
           <EmptyChatState />
