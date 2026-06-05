@@ -26,12 +26,12 @@ export default function AdminLayout() {
   const [menuPos,      setMenuPos]      = useState({ bottom: 0, left: 0, width: 180 });
 
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const adminName  = storedUser?.name  || "Admin";
-  const initial    = adminName.charAt(0).toUpperCase();
+  const adminName = user?.name || "Admin";
+  const initial   = adminName.charAt(0).toUpperCase();
+  const avatar    = user?.profilePicture;
 
   // Close dropdown on scroll
   useEffect(() => {
@@ -86,9 +86,13 @@ export default function AdminLayout() {
         onClick={onClick}
         className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition"
       >
-        <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-          {initial}
-        </div>
+        {avatar ? (
+          <img src={avatar} alt={adminName} className="w-9 h-9 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+            {initial}
+          </div>
+        )}
         {expanded && (
           <>
             <div className="flex flex-col text-left overflow-hidden flex-1">

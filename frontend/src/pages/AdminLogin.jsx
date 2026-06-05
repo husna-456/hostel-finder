@@ -46,7 +46,7 @@ export default function AdminLogin() {
         toast.success("Admin login successful!");
 
         // ✅ MOST IMPORTANT FIX
-        login(data.token, data.role);
+        login(data.token, data.role, data.user);
 
         // ✅ Redirect
         navigate(`/${data.role}/dashboard`);

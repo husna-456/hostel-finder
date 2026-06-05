@@ -141,11 +141,13 @@ export const login = async (req, res) => {
             message: `${role} login successful`,
             token,
             role: user.role,
-             user: {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-  },
+            user: {
+                _id:            user._id,
+                name:           user.name,
+                email:          user.email,
+                role:           user.role,
+                profilePicture: user.profilePicture || "",
+            },
         });
 
     } catch (error) {

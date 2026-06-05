@@ -59,8 +59,7 @@ export default function Login() {
         const data = await res.json();
         toast.success("Login successful!");
 
-        login(data.token, data.role);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        login(data.token, data.role, data.user);
         localStorage.setItem("userRole", data.role);
 
 
