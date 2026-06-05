@@ -3,11 +3,11 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
-dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), "../../.env") });
+dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), "../.env") });
 
 import connectDB from "../config/db.js";
 import User from "../models/User.js";
-import Hostel from "../models/Hostel.js";
+import { Hostel } from "../models/Hostel.js";
 
 async function redistribute() {
   await connectDB();
