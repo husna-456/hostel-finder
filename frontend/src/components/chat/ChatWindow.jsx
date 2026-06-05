@@ -57,6 +57,7 @@ export default function ChatWindow({ conversation, onBack }) {
 
   const messagesEndRef = useRef(null);
   const menuRef        = useRef(null);
+  const setHeightRef   = useRef(null);
 
   /* ── visual viewport height (fixes Android keyboard gap) ── */
   useEffect(() => {
@@ -64,12 +65,19 @@ export default function ChatWindow({ conversation, onBack }) {
       const vh = window.visualViewport?.height || window.innerHeight;
       document.documentElement.style.setProperty("--chat-height", vh + "px");
     };
+    const handleFocusOut = () => setTimeout(setHeight, 300);
+
+    setHeightRef.current = setHeight;
     setHeight();
     window.visualViewport?.addEventListener("resize", setHeight);
     window.addEventListener("resize", setHeight);
+    window.addEventListener("focusin",  setHeight);
+    window.addEventListener("focusout", handleFocusOut);
     return () => {
       window.visualViewport?.removeEventListener("resize", setHeight);
       window.removeEventListener("resize", setHeight);
+      window.removeEventListener("focusin",  setHeight);
+      window.removeEventListener("focusout", handleFocusOut);
     };
   }, []);
 
@@ -179,7 +187,10 @@ export default function ChatWindow({ conversation, onBack }) {
   }, []);
 
   /* ── handlers ── */
-  const handleSend = (msg) => setMessages((prev) => [...prev, msg]);
+  const handleSend = (msg) => {
+    setMessages((prev) => [...prev, msg]);
+    setHeightRef.current?.();
+  };
 
   const handleClearChat = () => {
     setMenuOpen(false);
