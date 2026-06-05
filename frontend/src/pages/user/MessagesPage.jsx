@@ -12,11 +12,10 @@ export default function MessagesPage() {
   const isSidePanel      = searchParams.get("isSidePanel");
 
   const [conversation, setConversation] = useState(null);
-  const [mobileView,   setMobileView]   = useState("list");
-
-  useEffect(() => {
-    if (isSidePanel) setMobileView("chat");
-  }, [isSidePanel]);
+  // Open directly into chat window when launched from "Chat with Owner" (params present)
+  const [mobileView, setMobileView] = useState(
+    (hostelId && ownerId) || isSidePanel ? "chat" : "list"
+  );
 
   useEffect(() => {
     if (hostelId && ownerId) {
