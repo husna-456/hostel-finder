@@ -212,11 +212,11 @@ export default function ChatWindow({ conversation, onBack }) {
 
   return (
     <section
-      className="flex flex-col h-full w-full overflow-hidden"
-      style={{ backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
+      className="flex flex-col w-full overflow-hidden"
+      style={{ height: "100dvh", backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
     >
       {/* ══════════════════════ HEADER ══════════════════════ */}
-      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0 sticky top-0 z-20">
+      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0">
 
         {/* Back button — mobile only */}
         <button
