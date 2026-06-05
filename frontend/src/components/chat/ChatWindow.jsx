@@ -65,7 +65,11 @@ export default function ChatWindow({ conversation, onBack }) {
       const vh = window.visualViewport?.height || window.innerHeight;
       document.documentElement.style.setProperty("--chat-height", vh + "px");
     };
-    const handleFocusOut = () => setTimeout(setHeight, 300);
+const handleFocusOut = () => {
+  setTimeout(setHeight, 100);
+  setTimeout(setHeight, 300);
+  setTimeout(setHeight, 500);
+};
 
     setHeightRef.current = setHeight;
     setHeight();
@@ -188,9 +192,11 @@ export default function ChatWindow({ conversation, onBack }) {
 
   /* ── handlers ── */
   const handleSend = (msg) => {
-    setMessages((prev) => [...prev, msg]);
-    setHeightRef.current?.();
-  };
+  setMessages((prev) => [...prev, msg]);
+  setTimeout(() => setHeightRef.current?.(), 100);
+  setTimeout(() => setHeightRef.current?.(), 300);
+  setTimeout(() => setHeightRef.current?.(), 600);
+};
 
   const handleClearChat = () => {
     setMenuOpen(false);
