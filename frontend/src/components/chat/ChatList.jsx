@@ -142,7 +142,7 @@ export default function ChatList({ activeConversationId, onSelect }) {
       </div>
 
       {/* ── List ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filtered.length > 0 ? (
           filtered.map((c) => {
             const other  = getOtherUser(c);

@@ -143,30 +143,6 @@ function App() {
           <Route path="/advanced-search" element={<AdvancedSearch />} />
           <Route path="/book-hostel" element={<BookHostel />} />
           <Route path="/book-hostel/:id" element={<BookHostel />} />
-          <Route
-            path="/hostel_owner/chat"
-            element={
-              !isAuthenticated ? <Navigate to="/login" replace /> :
-              role !== ROLES.HOSTEL_OWNER ? <Navigate to="/unauthorized" replace /> :
-              <OwnerChat />
-            }
-          />
-          <Route
-            path="/user/messages/:hostelId/:ownerId"
-            element={
-              !isAuthenticated ? <Navigate to="/login" replace /> :
-              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
-              <MessagesPage />
-            }
-          />
-          <Route
-            path="/user/chat"
-            element={
-              !isAuthenticated ? <Navigate to="/login" replace /> :
-              role !== ROLES.USER ? <Navigate to="/unauthorized" replace /> :
-              <MessagesPage />
-            }
-          />
 
           {/* 🏢 Admin Routes */}
           <Route
@@ -210,6 +186,7 @@ function App() {
             <Route path="bookings" element={<OwnerBookings />} />
             <Route path="hostels" element={<OwnerHostelListing />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="chat" element={<OwnerChat />} />
           </Route>
 
           {/* 👤 User Routes */}
@@ -236,6 +213,7 @@ function App() {
             <Route path="payment-success" element={<PaymentSuccessPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="chat" element={<MessagesPage />} />
             <Route path="messages/:hostelId/:ownerId" element={<MessagesPage />} />
           </Route>
 

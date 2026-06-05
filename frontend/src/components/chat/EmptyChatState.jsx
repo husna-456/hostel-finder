@@ -1,7 +1,7 @@
 export default function EmptyChatState() {
   return (
  
-    <div className="h-full w-full flex flex-col items-center justify-center bg-[#f0f2f5]">
+    <div className="h-full w-full flex items-center justify-center bg-[#f0f2f5]">
       <img
         src="/chat.png"   // 👈 apna logo ya icon
         alt="Chat"

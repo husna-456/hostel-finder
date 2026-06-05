@@ -359,7 +359,7 @@ export default function ChatWindow({ conversation, onBack }) {
       )}
 
       {/* ══════════════════════ MESSAGES ══════════════════════ */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+      <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
         {messages.length > 0 ? (
           messages.map((msg) => (
             <div id={`msg-${msg._id}`} key={msg._id || Math.random()}>

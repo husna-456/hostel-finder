@@ -13,10 +13,10 @@ export default function OwnerChat() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+    <div className="h-full flex overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
       {/* ── Conversation list ── */}
       <div
-        className={`flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
+        className={`h-full flex-col border-r border-gray-200 w-full md:w-80 lg:w-96 shrink-0
           ${mobileView === "chat" ? "hidden md:flex" : "flex"}`}
       >
         <ChatList
@@ -27,7 +27,7 @@ export default function OwnerChat() {
 
       {/* ── Chat window ── */}
       <div
-        className={`flex-1 flex-col
+        className={`flex-1 h-full flex-col overflow-hidden min-h-0
           ${mobileView === "list" ? "hidden md:flex" : "flex"}`}
       >
         {activeConversation ? (
