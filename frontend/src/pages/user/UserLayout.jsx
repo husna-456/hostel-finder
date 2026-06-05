@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import UserSidebar from "./UserSidebar";
 
 export default function UserLayout() {
+  const location = useLocation();
+  const isChatPage = location.pathname.endsWith("/chat");
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function UserLayout() {
     <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
       <UserSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      {!sidebarOpen && (
+      {!sidebarOpen && !isChatPage && (
         <button
           onClick={() => setSidebarOpen(true)}
           className="md:hidden fixed top-4 left-4 z-30 bg-white p-2 rounded-xl shadow-md text-gray-700 hover:text-purple-600 transition-colors"

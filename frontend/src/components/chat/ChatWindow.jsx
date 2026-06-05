@@ -216,7 +216,7 @@ export default function ChatWindow({ conversation, onBack }) {
       style={{ backgroundImage: "url('/chat-bg.jpg')", backgroundRepeat: "repeat", backgroundSize: "300px" }}
     >
       {/* ══════════════════════ HEADER ══════════════════════ */}
-      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0 relative z-10">
+      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0 sticky top-0 z-20">
 
         {/* Back button — mobile only */}
         <button

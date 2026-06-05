@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import OwnerSidebar from "../components/OwnerSidebar";
 import { FaBars } from "react-icons/fa";
 
 export default function OwnerLayout() {
+  const location = useLocation();
+  const isChatPage = location.pathname.endsWith("/chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -16,8 +18,8 @@ export default function OwnerLayout() {
           sidebarOpen ? "md:ml-60" : "md:ml-16"
         }`}
       >
-        {/* Mobile top bar with hamburger */}
-        <div className="md:hidden flex items-center gap-3 bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-30">
+        {/* Mobile top bar with hamburger — hidden on chat page (chat has its own header) */}
+        <div className={`md:hidden flex items-center gap-3 bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-30 ${isChatPage ? "hidden" : ""}`}>
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
