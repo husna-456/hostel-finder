@@ -45,9 +45,10 @@ export default function ChatWindow({ conversation, onBack }) {
   /* ── state ── */
   const [messages,      setMessages]      = useState([]);
   const [isTyping,      setIsTyping]      = useState(false);
-  const [menuOpen,      setMenuOpen]      = useState(false);
-  const [muted,         setMuted]         = useState(false);
-  const [replyTo,       setReplyTo]       = useState(null);
+  const [menuOpen,          setMenuOpen]          = useState(false);
+  const [muted,             setMuted]             = useState(false);
+  const [replyTo,           setReplyTo]           = useState(null);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [contactStatus, setContactStatus] = useState({
     isOnline: otherUser?.isOnline || false,
     lastSeen: otherUser?.lastSeen || null,
@@ -228,7 +229,7 @@ export default function ChatWindow({ conversation, onBack }) {
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [searchIdx, searchResults]);
 
-  /* ── close menu on outside click ── */
+  /* ── close header menu on outside click ── */
   useEffect(() => {
     const h = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -236,6 +237,14 @@ export default function ChatWindow({ conversation, onBack }) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  /* ── close message popup when clicking outside (desktop) ── */
+  useEffect(() => {
+    if (!selectedMessageId) return;
+    const h = () => setSelectedMessageId(null);
+    document.addEventListener("click", h);
+    return () => document.removeEventListener("click", h);
+  }, [selectedMessageId]);
 
   /* ── handlers ── */
   const handleSend = (msg) => {
@@ -437,6 +446,9 @@ export default function ChatWindow({ conversation, onBack }) {
                 onReply={setReplyTo}
                 onSelfDelete={handleSelfDelete}
                 otherUser={otherUser}
+                isSelected={selectedMessageId === msg._id}
+                onSelect={() => setSelectedMessageId(msg._id)}
+                onClose={() => setSelectedMessageId(null)}
               />
             </div>
           ))

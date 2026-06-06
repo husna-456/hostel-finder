@@ -5,7 +5,7 @@ import { getUserId } from "../../utils/auth";
 import clsx from "clsx";
 import {
   Check, CheckCheck, FileText, Download, Play, Pause,
-  Copy, Reply, Trash2, X, MoreHorizontal, Forward, Pin, Star, Plus,
+  Copy, Reply, Trash2, X, ChevronDown, Plus,
 } from "lucide-react";
 import { fetchClient } from "../../api/fetchClient";
 import { toast } from "react-toastify";
@@ -20,8 +20,8 @@ function formatTime(ts) {
 
 function formatSize(bytes) {
   if (!bytes) return "";
-  if (bytes < 1024)       return `${bytes} B`;
-  if (bytes < 1048576)    return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024)    return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
@@ -40,6 +40,34 @@ function getDocStyle(name) {
   return { bg: "bg-gray-100", color: "text-gray-600", label: ext.toUpperCase() || "FILE" };
 }
 
+/* ─── popup position calculator ─────────────────────────── */
+
+function calcPopupPos(rect, isSender) {
+  const PW = 224;  // w-56
+  const PH = 340;  // approx (emoji bar ~52px + gap + menu ~280px)
+
+  let left;
+  if (isSender) {
+    // Open to the LEFT of the bubble
+    left = rect.left - PW - 8;
+    if (left < 8) left = 8;
+  } else {
+    // Open to the RIGHT of the bubble
+    left = rect.right + 8;
+    if (left + PW > window.innerWidth - 8) left = window.innerWidth - PW - 8;
+  }
+
+  let top = rect.top;
+  if (top + PH > window.innerHeight - 8) top = window.innerHeight - PH - 8;
+  top = Math.max(8, top);
+
+  return { top, left };
+}
+
+/* ─── quick emoji constants ──────────────────────────────── */
+
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
 /* ─── tick ─────────────────────────────────────────────── */
 
 function Tick({ status, white = false }) {
@@ -54,31 +82,14 @@ function Tick({ status, white = false }) {
 
 function MediaModal({ type, src, onClose }) {
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center"
-      onClick={onClose}
-    >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-10"
-      >
+    <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-10">
         <X size={22} />
       </button>
       {type === "image" ? (
-        <img
-          src={src}
-          alt="full"
-          className="max-w-[95vw] max-h-[90vh] object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <img src={src} alt="full" className="max-w-[95vw] max-h-[90vh] object-contain" onClick={(e) => e.stopPropagation()} />
       ) : (
-        <video
-          src={src}
-          controls
-          autoPlay
-          className="max-w-[95vw] max-h-[90vh] rounded-xl"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <video src={src} controls autoPlay className="max-w-[95vw] max-h-[90vh] rounded-xl" onClick={(e) => e.stopPropagation()} />
       )}
     </div>,
     document.body
@@ -119,11 +130,8 @@ function VoiceNotePlayer({ message, isSender, otherUser }) {
   return (
     <div className="flex items-center gap-2 min-w-[220px] max-w-[280px]">
       <audio
-        ref={audioRef}
-        src={message.fileUrl}
-        preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
+        ref={audioRef} src={message.fileUrl} preload="metadata"
+        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrent(0); }}
         onTimeUpdate={(e) => setCurrent(e.target.currentTime)}
         onLoadedMetadata={(e) => setTotal(e.target.duration || message.duration || 0)}
@@ -135,25 +143,15 @@ function VoiceNotePlayer({ message, isSender, otherUser }) {
           {initial}
         </div>
       )}
-      <button
-        onClick={toggle}
-        className="w-9 h-9 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center shrink-0 transition-colors"
-      >
-        {playing
-          ? <Pause size={14} className="text-white" />
-          : <Play  size={14} className="text-white ml-0.5" />}
+      <button onClick={toggle} className="w-9 h-9 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center shrink-0 transition-colors">
+        {playing ? <Pause size={14} className="text-white" /> : <Play size={14} className="text-white ml-0.5" />}
       </button>
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <div className="flex items-center gap-px h-6">
           {bars.map((h, i) => (
-            <div
-              key={i}
-              style={{ height: `${h}px` }}
-              className={clsx(
-                "w-[3px] rounded-full transition-colors duration-100",
-                (i / 30) < progress ? "bg-purple-600" : "bg-gray-300"
-              )}
-            />
+            <div key={i} style={{ height: `${h}px` }}
+              className={clsx("w-[3px] rounded-full transition-colors duration-100",
+                (i / 30) < progress ? "bg-purple-600" : "bg-gray-300")} />
           ))}
         </div>
         <span className="text-[10px] text-gray-400 tabular-nums leading-none">
@@ -178,13 +176,10 @@ function PollMessage({ message }) {
   const handleVote = async (idx) => {
     try {
       const result = await fetchClient(`/messages/${message._id}/vote`, {
-        method: "POST",
-        body: JSON.stringify({ optionIndex: idx }),
+        method: "POST", body: JSON.stringify({ optionIndex: idx }),
       });
       setLocalPoll(result.poll);
-    } catch {
-      toast.error("Vote failed");
-    }
+    } catch { toast.error("Vote failed"); }
   };
 
   useEffect(() => { setLocalPoll(message.poll); }, [message.poll]);
@@ -198,14 +193,9 @@ function PollMessage({ message }) {
           const pct   = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
           const voted = idx === userVotedIdx;
           return (
-            <button
-              key={idx}
-              onClick={() => handleVote(idx)}
-              className={clsx(
-                "w-full text-left rounded-xl px-3 py-2 transition-colors border",
-                voted ? "bg-purple-100 border-purple-300" : "bg-white/60 border-gray-200 hover:bg-purple-50"
-              )}
-            >
+            <button key={idx} onClick={() => handleVote(idx)}
+              className={clsx("w-full text-left rounded-xl px-3 py-2 transition-colors border",
+                voted ? "bg-purple-100 border-purple-300" : "bg-white/60 border-gray-200 hover:bg-purple-50")}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[13px] text-gray-800 font-medium">
                   {voted && <span className="mr-1 text-purple-600">✓</span>}
@@ -230,9 +220,7 @@ function PollMessage({ message }) {
 function ReplyPreview({ replyTo }) {
   if (!replyTo) return null;
   const name    = replyTo.senderId?.name || "Unknown";
-  const content = replyTo.type === "text"
-    ? replyTo.message
-    : replyTo.fileName || replyTo.type;
+  const content = replyTo.type === "text" ? replyTo.message : replyTo.fileName || replyTo.type;
   return (
     <div className="border-l-4 border-purple-400 bg-white/40 rounded px-2 py-1 mb-1.5">
       <p className="text-[11px] font-semibold text-purple-600 truncate">{name}</p>
@@ -254,16 +242,8 @@ function MessageContent({ message, isSender, otherUser }) {
   if (type === "image") {
     return (
       <>
-        <div
-          className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden"
-          onClick={() => setModal("image")}
-        >
-          <img
-            src={message.fileUrl}
-            alt={message.fileName || "image"}
-            className="w-full h-auto object-cover"
-            loading="lazy"
-          />
+        <div className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden" onClick={() => setModal("image")}>
+          <img src={message.fileUrl} alt={message.fileName || "image"} className="w-full h-auto object-cover" loading="lazy" />
           <div className="absolute bottom-0 right-0 px-2 py-1 bg-black/40 rounded-tl-xl flex items-center gap-1">
             <span className="text-white text-[11px] leading-none">{formatTime(message.createdAt)}</span>
             {isSender && <Tick status={message.status} white />}
@@ -277,10 +257,7 @@ function MessageContent({ message, isSender, otherUser }) {
   if (type === "video") {
     return (
       <>
-        <div
-          className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden"
-          onClick={() => setModal("video")}
-        >
+        <div className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden" onClick={() => setModal("video")}>
           <video src={message.fileUrl} className="w-full h-48 object-cover" />
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <div className="w-14 h-14 rounded-full bg-white/80 flex items-center justify-center">
@@ -309,26 +286,19 @@ function MessageContent({ message, isSender, otherUser }) {
   if (type === "document") {
     const { bg, color, label } = getDocStyle(message.fileName);
     return (
-      <div
-        className="flex items-center gap-3 bg-white/90 rounded-xl p-3 min-w-[220px] max-w-[280px] cursor-pointer hover:bg-white transition-colors"
-        onClick={() => window.open(message.fileUrl, "_blank")}
-      >
+      <div className="flex items-center gap-3 bg-white/90 rounded-xl p-3 min-w-[220px] max-w-[280px] cursor-pointer hover:bg-white transition-colors"
+        onClick={() => window.open(message.fileUrl, "_blank")}>
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
           <FileText size={24} className={color} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-gray-900 truncate">{message.fileName || "Document"}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            {message.fileSize ? formatSize(message.fileSize) + " · " : ""}
-            {label}
+            {message.fileSize ? formatSize(message.fileSize) + " · " : ""}{label}
           </p>
         </div>
-        <a
-          href={message.fileUrl}
-          download={message.fileName}
-          onClick={(e) => e.stopPropagation()}
-          className="text-purple-600 hover:text-purple-700 shrink-0"
-        >
+        <a href={message.fileUrl} download={message.fileName} onClick={(e) => e.stopPropagation()}
+          className="text-purple-600 hover:text-purple-700 shrink-0">
           <Download size={18} />
         </a>
       </div>
@@ -346,38 +316,7 @@ function MessageContent({ message, isSender, otherUser }) {
   );
 }
 
-/* ─── quick reaction bar ────────────────────────────────── */
-
-const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
-function QuickReactionBar({ onReact, onMore, currentUserReaction }) {
-  return (
-    <div className="flex items-center gap-0.5 bg-white rounded-full shadow-md border border-gray-200 px-1.5 py-1">
-      {QUICK_EMOJIS.map((e) => (
-        <button
-          key={e}
-          onClick={() => onReact(e)}
-          title={e}
-          className={clsx(
-            "text-[18px] leading-none p-1 rounded-full hover:scale-125 transition-transform",
-            currentUserReaction === e && "bg-purple-100"
-          )}
-        >
-          {e}
-        </button>
-      ))}
-      <button
-        onClick={onMore}
-        className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ml-0.5 transition-colors"
-        title="More reactions"
-      >
-        <Plus size={13} className="text-gray-500" />
-      </button>
-    </div>
-  );
-}
-
-/* ─── reactions display ─────────────────────────────────── */
+/* ─── reactions display (always shown below bubble) ──────── */
 
 function ReactionsDisplay({ reactions, currentUserId, onReact }) {
   if (!reactions?.length) return null;
@@ -395,20 +334,15 @@ function ReactionsDisplay({ reactions, currentUserId, onReact }) {
           (u) => u?.toString() === currentUserId || u === currentUserId
         );
         return (
-          <button
-            key={emoji}
-            onClick={() => onReact(emoji)}
+          <button key={emoji} onClick={() => onReact(emoji)}
             className={clsx(
               "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 border text-xs transition-colors",
               hasReacted
                 ? "bg-purple-100 border-purple-300 text-purple-700"
                 : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-            )}
-          >
+            )}>
             <span className="text-[13px] leading-none">{emoji}</span>
-            {userIds.length > 1 && (
-              <span className="text-[10px] font-medium ml-0.5">{userIds.length}</span>
-            )}
+            {userIds.length > 1 && <span className="text-[10px] font-medium ml-0.5">{userIds.length}</span>}
           </button>
         );
       })}
@@ -416,25 +350,22 @@ function ReactionsDisplay({ reactions, currentUserId, onReact }) {
   );
 }
 
-/* ─── action menu ───────────────────────────────────────── */
+/* ─── action menu items (used in both popup + sheet) ─────── */
 
-function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
-  const hasMedia = !!(message.fileUrl) && !message.isDeleted;
-  const hasText  = !!(message.message) && !message.isDeleted;
+function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onClose }) {
+  const hasMedia = !!message.fileUrl && !message.isDeleted;
+  const hasText  = !!message.message && !message.isDeleted;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.message || "").then(() => toast.success("Copied"));
     onClose();
   };
 
-  const handleReply    = () => { onReply(message); onClose(); };
-  const handleForward  = () => { onClose(); toast.info("Forward — coming soon"); };
-  const handlePin      = () => { onClose(); toast.info("Pin — coming soon"); };
-  const handleStar     = () => { onClose(); toast.info("Star — coming soon"); };
+  const handleReply = () => { onReply(message); onClose(); };
 
   const handleDownload = () => {
     const a = document.createElement("a");
-    a.href     = message.fileUrl;
+    a.href = message.fileUrl;
     a.download = message.fileName || "download";
     a.click();
     onClose();
@@ -442,7 +373,6 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
 
   const handleDelete = async () => {
     onClose();
-
     if (isSender) {
       const result = await Swal.fire({
         title: "Delete message?",
@@ -456,19 +386,16 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
         denyButtonColor: "#7c3aed",
         cancelButtonColor: "#6b7280",
       });
-
       if (result.isConfirmed) {
         try {
           await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH",
-            body: JSON.stringify({ deleteType: "foreveryone" }),
+            method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
           });
         } catch { toast.error("Failed to delete"); }
       } else if (result.isDenied) {
         try {
           await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH",
-            body: JSON.stringify({ deleteType: "forme" }),
+            method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
           });
           onSelfDelete?.(message._id);
         } catch { toast.error("Failed to delete"); }
@@ -484,12 +411,10 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
         confirmButtonColor: "#7c3aed",
         cancelButtonColor: "#6b7280",
       });
-
       if (result.isConfirmed) {
         try {
           await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH",
-            body: JSON.stringify({ deleteType: "forme" }),
+            method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
           });
           onSelfDelete?.(message._id);
         } catch { toast.error("Failed to delete"); }
@@ -498,68 +423,92 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
   };
 
   const items = [
-    { icon: Reply,    label: "Reply",    onClick: handleReply,    show: true },
-    { icon: Copy,     label: "Copy text",onClick: handleCopy,     show: hasText },
-    { icon: Forward,  label: "Forward",  onClick: handleForward,  show: !message.isDeleted },
-    { icon: Download, label: "Download", onClick: handleDownload, show: hasMedia },
-    { icon: Pin,      label: "Pin",      onClick: handlePin,      show: true },
-    { icon: Star,     label: "Star",     onClick: handleStar,     show: true },
-    { icon: Trash2,   label: "Delete",   onClick: handleDelete,   show: true, danger: true },
+    { icon: Reply,    label: "Reply",                                onClick: handleReply,    show: true },
+    { icon: Copy,     label: "Copy text",                            onClick: handleCopy,     show: hasText },
+    { icon: Download, label: "Download",                             onClick: handleDownload, show: hasMedia },
+    { icon: Trash2,   label: isSender ? "Delete" : "Delete for me", onClick: handleDelete,   show: true, danger: true },
+    { icon: X,        label: "Cancel",                               onClick: onClose,        show: true, cancel: true },
   ].filter((i) => i.show);
 
-  return items.map((item) => (
-    <button
-      key={item.label}
-      onClick={item.onClick}
-      className={clsx(
-        "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
-        item.danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
-      )}
-    >
-      <item.icon size={15} className="shrink-0" />
-      {item.label}
-    </button>
-  ));
+  return (
+    <>
+      {items.map((item) => (
+        <div key={item.label}>
+          {item.cancel && <div className="border-t border-gray-100 my-1" />}
+          <button
+            onClick={item.onClick}
+            className={clsx(
+              "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
+              item.danger  ? "text-red-600 hover:bg-red-50" :
+              item.cancel  ? "text-gray-400 hover:bg-gray-50" :
+                             "text-gray-700 hover:bg-gray-50"
+            )}
+          >
+            <item.icon size={15} className="shrink-0" />
+            {item.label}
+          </button>
+        </div>
+      ))}
+    </>
+  );
 }
 
 /* ─── main MessageBubble ────────────────────────────────── */
 
 export default function MessageBubble({
   message, highlight, isCurrentResult, onReply, onSelfDelete, otherUser,
+  isSelected, onSelect, onClose,
 }) {
   const currentUserId = getUserId();
   const isSender =
     message.senderId?.toString() === currentUserId ||
     message.senderId === currentUserId;
 
-  const [showMenu,       setShowMenu]       = useState(false);
-  const [menuMobile,     setMenuMobile]     = useState(false);
+  const [openStyle,      setOpenStyle]      = useState(null); // "popup" | "sheet"
+  const [popupPos,       setPopupPos]       = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const bubbleRef    = useRef(null);
   const longPressRef = useRef(null);
-  const menuRef      = useRef(null);
 
+  // When parent deselects this message, reset local open state
   useEffect(() => {
-    if (!showMenu) return;
-    const h = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showMenu]);
+    if (!isSelected) {
+      setOpenStyle(null);
+      setPopupPos(null);
+      setShowEmojiPicker(false);
+    }
+  }, [isSelected]);
 
-  const onTouchStart = () => { longPressRef.current = setTimeout(() => setMenuMobile(true), 500); };
-  const onTouchEnd   = () => clearTimeout(longPressRef.current);
-  const closeMenu    = () => { setShowMenu(false); setMenuMobile(false); };
+  // Desktop: ChevronDown click
+  const triggerPopup = (e) => {
+    e.stopPropagation();
+    if (!bubbleRef.current) return;
+    const rect = bubbleRef.current.getBoundingClientRect();
+    setOpenStyle("popup");
+    setPopupPos(calcPopupPos(rect, isSender));
+    onSelect?.();
+  };
+
+  // Mobile: long press
+  const onTouchStart = () => {
+    longPressRef.current = setTimeout(() => {
+      setOpenStyle("sheet");
+      onSelect?.();
+    }, 500);
+  };
+  const onTouchEnd = () => clearTimeout(longPressRef.current);
+
+  const handleClose = () => {
+    setShowEmojiPicker(false);
+    onClose?.();
+  };
 
   const handleReact = async (emoji) => {
     try {
       await fetchClient(`/messages/${message._id}/react`, {
-        method: "PATCH",
-        body: JSON.stringify({ emoji }),
+        method: "PATCH", body: JSON.stringify({ emoji }),
       });
-    } catch {
-      toast.error("Failed to react");
-    }
+    } catch { toast.error("Failed to react"); }
   };
 
   const currentUserReaction = message.reactions?.find(
@@ -569,107 +518,119 @@ export default function MessageBubble({
   const type = message.type || "text";
   const hideBottomMeta = !message.isDeleted && (type === "image" || type === "video");
 
+  /* ── emoji bar (shared between popup + sheet) ── */
+  const emojiBar = (
+    <div className="bg-white shadow-lg rounded-full px-3 py-2 flex items-center gap-0.5">
+      {QUICK_EMOJIS.map((e) => (
+        <button
+          key={e}
+          onClick={() => { handleReact(e); handleClose(); }}
+          className={clsx(
+            "text-xl leading-none px-1 py-0.5 rounded-full hover:scale-125 transition-transform cursor-pointer",
+            currentUserReaction === e && "bg-purple-100"
+          )}
+        >
+          {e}
+        </button>
+      ))}
+      <button
+        onClick={() => setShowEmojiPicker(true)}
+        className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ml-0.5 transition-colors shrink-0"
+        title="More reactions"
+      >
+        <Plus size={13} className="text-gray-500" />
+      </button>
+    </div>
+  );
+
   return (
     <>
-      {/* Mobile bottom sheet */}
-      {menuMobile && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-end md:hidden" onClick={closeMenu}>
+      {/* ── Desktop positioned popup (emoji bar + action menu) ── */}
+      {isSelected && openStyle === "popup" && popupPos && createPortal(
+        <div
+          className="fixed z-[9990] flex flex-col gap-1.5"
+          style={{ top: popupPos.top, left: popupPos.left, width: "224px" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {emojiBar}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <ActionMenuItems
+              message={message} isSender={isSender}
+              onReply={onReply} onSelfDelete={onSelfDelete} onClose={handleClose}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Mobile bottom sheet ── */}
+      {isSelected && openStyle === "sheet" && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-end bg-black/40"
+          onClick={handleClose}
+        >
           <div
             className="bg-white w-full rounded-t-2xl shadow-2xl pb-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto my-3" />
-            {/* Quick reactions inside bottom sheet */}
-            <div className="flex justify-center px-4 pb-3">
-              <QuickReactionBar
-                onReact={(e) => { handleReact(e); closeMenu(); }}
-                onMore={() => { closeMenu(); setShowEmojiPicker(true); }}
-                currentUserReaction={currentUserReaction}
-              />
-            </div>
+            <div className="flex justify-center px-4 pb-3">{emojiBar}</div>
             <div className="border-t border-gray-100" />
-            <ActionMenu
-              message={message}
-              isSender={isSender}
-              onReply={onReply}
-              onSelfDelete={onSelfDelete}
-              onClose={closeMenu}
+            <ActionMenuItems
+              message={message} isSender={isSender}
+              onReply={onReply} onSelfDelete={onSelfDelete} onClose={handleClose}
             />
           </div>
         </div>,
         document.body
       )}
 
-      {/* Full emoji picker portal (for [+] button) */}
+      {/* ── Full emoji picker ── */}
       {showEmojiPicker && createPortal(
         <div
-          className="fixed inset-0 z-[9998] flex items-end justify-center sm:items-center"
+          className="fixed inset-0 z-[9998] flex items-end justify-center sm:items-center bg-black/40"
           onClick={() => setShowEmojiPicker(false)}
         >
           <div onClick={(e) => e.stopPropagation()}>
             <EmojiPicker
-              onEmojiClick={(e) => { handleReact(e.emoji); setShowEmojiPicker(false); }}
+              onEmojiClick={(e) => { handleReact(e.emoji); setShowEmojiPicker(false); handleClose(); }}
               height={380}
               width={300}
-              searchDisabled={false}
             />
           </div>
         </div>,
         document.body
       )}
 
-      {/* Outer column — groups reaction bar, bubble row, and reaction pills */}
+      {/* ── Bubble column (chevron + bubble + reactions) ── */}
       <div className="flex flex-col group">
-        {/* Quick reaction bar — desktop hover reveal */}
-        <div className={clsx(
-          "hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity mb-1",
-          isSender ? "justify-end" : "justify-start"
-        )}>
-          <QuickReactionBar
-            onReact={handleReact}
-            onMore={() => setShowEmojiPicker(true)}
-            currentUserReaction={currentUserReaction}
-          />
-        </div>
+        <div className={clsx("flex items-end gap-1.5", isSender ? "justify-end" : "justify-start")}>
 
-        {/* Bubble row */}
-        <div
-          className={clsx("flex items-end gap-1", isSender ? "justify-end" : "justify-start")}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          onTouchMove={onTouchEnd}
-        >
-          {/* Desktop ⋯ — left of bubble for received */}
+          {/* ChevronDown — LEFT side for received messages */}
           {!isSender && (
-            <div ref={menuRef} className="relative hidden md:block shrink-0 self-center">
-              <button
-                onClick={() => setShowMenu((p) => !p)}
-                className="p-1 rounded-full text-gray-300 hover:text-gray-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal size={16} />
-              </button>
-              {showMenu && (
-                <div className="absolute left-full ml-1 top-0 w-44 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 py-1 overflow-hidden">
-                  <ActionMenu
-                    message={message}
-                    isSender={isSender}
-                    onReply={onReply}
-                    onSelfDelete={onSelfDelete}
-                    onClose={closeMenu}
-                  />
-                </div>
-              )}
-            </div>
+            <button
+              onClick={triggerPopup}
+              className="hidden md:flex w-6 h-6 rounded-full bg-white shadow-sm border border-gray-200 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center hover:bg-gray-50"
+              aria-label="Message options"
+            >
+              <ChevronDown size={13} className="text-gray-500" />
+            </button>
           )}
 
           {/* Bubble */}
           <div
+            ref={bubbleRef}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onTouchMove={onTouchEnd}
+            onContextMenu={(e) => e.preventDefault()}
             className={clsx(
-              "max-w-[75%] md:max-w-[65%] rounded-2xl shadow-sm overflow-hidden",
+              "max-w-[75%] md:max-w-[65%] rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
               (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-2",
               isSender ? "bg-[#DCF8C6] rounded-br-sm" : "bg-white rounded-bl-sm",
               highlight && !isCurrentResult && "ring-2 ring-yellow-300",
-              isCurrentResult && "ring-2 ring-yellow-500"
+              isCurrentResult && "ring-2 ring-yellow-500",
+              isSelected && "ring-2 ring-purple-300",
             )}
           >
             {message.replyTo && (
@@ -677,9 +638,7 @@ export default function MessageBubble({
                 <ReplyPreview replyTo={message.replyTo} />
               </div>
             )}
-
             <MessageContent message={message} isSender={isSender} otherUser={otherUser} />
-
             {!hideBottomMeta && (
               <div className="flex items-center justify-end gap-1 mt-1">
                 <span className="text-[11px] text-gray-500 leading-none select-none">
@@ -690,31 +649,19 @@ export default function MessageBubble({
             )}
           </div>
 
-          {/* Desktop ⋯ — right of bubble for sent */}
+          {/* ChevronDown — RIGHT side for sent messages */}
           {isSender && (
-            <div ref={menuRef} className="relative hidden md:block shrink-0 self-center">
-              <button
-                onClick={() => setShowMenu((p) => !p)}
-                className="p-1 rounded-full text-gray-300 hover:text-gray-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal size={16} />
-              </button>
-              {showMenu && (
-                <div className="absolute right-full mr-1 top-0 w-44 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 py-1 overflow-hidden">
-                  <ActionMenu
-                    message={message}
-                    isSender={isSender}
-                    onReply={onReply}
-                    onSelfDelete={onSelfDelete}
-                    onClose={closeMenu}
-                  />
-                </div>
-              )}
-            </div>
+            <button
+              onClick={triggerPopup}
+              className="hidden md:flex w-6 h-6 rounded-full bg-white shadow-sm border border-gray-200 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center hover:bg-gray-50"
+              aria-label="Message options"
+            >
+              <ChevronDown size={13} className="text-gray-500" />
+            </button>
           )}
         </div>
 
-        {/* Reactions display below bubble */}
+        {/* Reactions below bubble */}
         <div className={clsx("flex", isSender ? "justify-end" : "justify-start")}>
           <ReactionsDisplay
             reactions={message.reactions}
