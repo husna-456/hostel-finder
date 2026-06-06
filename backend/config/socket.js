@@ -163,8 +163,8 @@ export const initSocket = (server) => {
 
           let lastMessagePreview;
           if (type === "image")         lastMessagePreview = "📷 Photo";
-          else if (type === "video")    lastMessagePreview = "🎬 Video";
-          else if (type === "audio")    lastMessagePreview = "🎵 Audio";
+          else if (type === "video")    lastMessagePreview = "🎥 Video";
+          else if (type === "audio")    lastMessagePreview = "🎤 Voice note";
           else if (type === "document") lastMessagePreview = `📄 ${fileName || "Document"}`;
           else if (type === "poll")     lastMessagePreview = `📊 ${poll?.question || "Poll"}`;
           else                          lastMessagePreview = text;

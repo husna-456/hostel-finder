@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { getUserId } from "../../utils/auth";
 import clsx from "clsx";
@@ -19,9 +19,9 @@ function formatTime(ts) {
 
 function formatSize(bytes) {
   if (!bytes) return "";
-  if (bytes < 1024)           return `${bytes} B`;
-  if (bytes < 1024 * 1024)   return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024)         return `${bytes} B`;
+  if (bytes < 1048576)      return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
 function formatDur(s) {
@@ -30,15 +30,26 @@ function formatDur(s) {
   return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 }
 
-function docIconColor(name) {
+function getDocStyle(name) {
   const ext = (name || "").split(".").pop().toLowerCase();
-  if (ext === "pdf")             return "text-red-500";
-  if (["doc","docx"].includes(ext)) return "text-blue-500";
-  if (["xls","xlsx"].includes(ext)) return "text-green-500";
-  return "text-gray-500";
+  if (ext === "pdf")               return { bg: "bg-red-100",    color: "text-red-600",    label: "PDF" };
+  if (["doc","docx"].includes(ext)) return { bg: "bg-blue-100",   color: "text-blue-600",   label: ext.toUpperCase() };
+  if (["xls","xlsx"].includes(ext)) return { bg: "bg-green-100",  color: "text-green-600",  label: ext.toUpperCase() };
+  if (["ppt","pptx"].includes(ext)) return { bg: "bg-orange-100", color: "text-orange-600", label: ext.toUpperCase() };
+  return { bg: "bg-gray-100", color: "text-gray-600", label: ext.toUpperCase() || "FILE" };
 }
 
-/* ─── media modal (image + video) ──────────────────────────── */
+/* ─── tick component (white variant for media overlays) ─── */
+
+function Tick({ status, white = false }) {
+  const gray  = white ? "text-white/80" : "text-gray-400";
+  const blue  = white ? "text-blue-300" : "text-blue-500";
+  if (status === "read")      return <CheckCheck size={12} className={`${blue} shrink-0`} />;
+  if (status === "delivered") return <CheckCheck size={12} className={`${gray} shrink-0`} />;
+  return <Check size={12} className={`${gray} shrink-0`} />;
+}
+
+/* ─── media modal (image + video lightbox) ──────────────── */
 
 function MediaModal({ type, src, onClose }) {
   return createPortal(
@@ -48,7 +59,7 @@ function MediaModal({ type, src, onClose }) {
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-10"
       >
         <X size={22} />
       </button>
@@ -73,60 +84,87 @@ function MediaModal({ type, src, onClose }) {
   );
 }
 
-/* ─── custom audio player ───────────────────────────────────── */
+/* ─── WhatsApp-style voice note player ──────────────────── */
 
-function AudioPlayer({ src, fileName, msgDuration }) {
-  const audioRef    = useRef(null);
-  const [playing,   setPlaying]   = useState(false);
-  const [current,   setCurrent]   = useState(0);
-  const [total,     setTotal]     = useState(msgDuration || 0);
+function VoiceNotePlayer({ message, isSender, otherUser }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [total,   setTotal]   = useState(message.duration || 0);
 
   const toggle = () => {
     if (!audioRef.current) return;
     playing ? audioRef.current.pause() : audioRef.current.play();
   };
 
-  const isVoice = !fileName || fileName.startsWith("voice_");
-  const label   = isVoice ? "Voice note" : fileName;
+  // Stable waveform bars seeded by message._id
+  const bars = useMemo(() =>
+    Array.from({ length: 30 }, (_, i) =>
+      4 + Math.abs(Math.sin(i * 2.5 + (message._id?.charCodeAt(0) || 42))) * 16
+    ),
+    [message._id]
+  );
+
+  // Determine avatar for the sender
+  const avatarUser = useMemo(() => {
+    if (isSender) {
+      try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
+    }
+    return otherUser || {};
+  }, [isSender, otherUser]);
+
+  const avatarPic = avatarUser?.profilePicture || "";
+  const initial   = (avatarUser?.name || "?").charAt(0).toUpperCase();
+
+  const progress = total > 0 ? current / total : 0;
 
   return (
-    <div className="flex items-center gap-2 min-w-[200px] max-w-[260px]">
+    <div className="flex items-center gap-2 min-w-[220px] max-w-[280px]">
       <audio
         ref={audioRef}
-        src={src}
+        src={message.fileUrl}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrent(0); }}
-        onTimeUpdate={() => setCurrent(audioRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setTotal(audioRef.current?.duration || msgDuration || 0)}
+        onTimeUpdate={(e) => setCurrent(e.target.currentTime)}
+        onLoadedMetadata={(e) => setTotal(e.target.duration || message.duration || 0)}
       />
+
+      {/* Sender avatar */}
+      {avatarPic ? (
+        <img src={avatarPic} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+          {initial}
+        </div>
+      )}
+
+      {/* Play / Pause */}
       <button
         onClick={toggle}
-        className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center shrink-0 hover:bg-purple-700 transition-colors"
+        className="w-9 h-9 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center shrink-0 transition-colors"
       >
         {playing
           ? <Pause size={14} className="text-white" />
           : <Play  size={14} className="text-white ml-0.5" />}
       </button>
 
-      <div className="flex-1 flex flex-col gap-0.5">
-        <p className="text-xs text-gray-700 font-medium truncate">{label}</p>
-        <div
-          className="h-1.5 bg-gray-200 rounded-full cursor-pointer"
-          onClick={(e) => {
-            if (!audioRef.current || !total) return;
-            const rect  = e.currentTarget.getBoundingClientRect();
-            const ratio = (e.clientX - rect.left) / rect.width;
-            audioRef.current.currentTime = ratio * total;
-          }}
-        >
-          <div
-            className="h-full bg-purple-600 rounded-full transition-all"
-            style={{ width: total ? `${(current / total) * 100}%` : "0%" }}
-          />
+      {/* Waveform + time */}
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <div className="flex items-center gap-px h-6">
+          {bars.map((h, i) => (
+            <div
+              key={i}
+              style={{ height: `${h}px` }}
+              className={clsx(
+                "w-[3px] rounded-full transition-colors duration-100",
+                (i / 30) < progress ? "bg-purple-600" : "bg-gray-300"
+              )}
+            />
+          ))}
         </div>
-        <span className="text-[10px] text-gray-400 tabular-nums">
+        <span className="text-[10px] text-gray-400 tabular-nums leading-none">
           {formatDur(current)} / {formatDur(total)}
         </span>
       </div>
@@ -134,14 +172,14 @@ function AudioPlayer({ src, fileName, msgDuration }) {
   );
 }
 
-/* ─── poll message ──────────────────────────────────────────── */
+/* ─── poll message ──────────────────────────────────────── */
 
 function PollMessage({ message }) {
   const currentUserId = getUserId();
   const [localPoll, setLocalPoll] = useState(message.poll);
 
-  const totalVotes    = localPoll?.options?.reduce((s, o) => s + (o.votes?.length || 0), 0) || 0;
-  const userVotedIdx  = localPoll?.options?.findIndex(
+  const totalVotes   = localPoll?.options?.reduce((s, o) => s + (o.votes?.length || 0), 0) || 0;
+  const userVotedIdx = localPoll?.options?.findIndex(
     (o) => o.votes?.some((v) => v?.toString() === currentUserId || v === currentUserId)
   );
 
@@ -164,18 +202,16 @@ function PollMessage({ message }) {
       <p className="text-[14px] font-semibold text-gray-900 mb-2">{localPoll?.question}</p>
       <div className="space-y-2">
         {localPoll?.options?.map((opt, idx) => {
-          const count  = opt.votes?.length || 0;
-          const pct    = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-          const voted  = idx === userVotedIdx;
+          const count = opt.votes?.length || 0;
+          const pct   = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+          const voted = idx === userVotedIdx;
           return (
             <button
               key={idx}
               onClick={() => handleVote(idx)}
               className={clsx(
                 "w-full text-left rounded-xl px-3 py-2 transition-colors border",
-                voted
-                  ? "bg-purple-100 border-purple-300"
-                  : "bg-white/60 border-gray-200 hover:bg-purple-50"
+                voted ? "bg-purple-100 border-purple-300" : "bg-white/60 border-gray-200 hover:bg-purple-50"
               )}
             >
               <div className="flex items-center justify-between mb-1">
@@ -197,7 +233,7 @@ function PollMessage({ message }) {
   );
 }
 
-/* ─── reply preview (quoted block) ─────────────────────────── */
+/* ─── reply preview (quoted block) ─────────────────────── */
 
 function ReplyPreview({ replyTo }) {
   if (!replyTo) return null;
@@ -205,7 +241,6 @@ function ReplyPreview({ replyTo }) {
   const content = replyTo.type === "text"
     ? replyTo.message
     : replyTo.fileName || replyTo.type;
-
   return (
     <div className="border-l-4 border-purple-400 bg-white/40 rounded px-2 py-1 mb-1.5">
       <p className="text-[11px] font-semibold text-purple-600 truncate">{name}</p>
@@ -214,53 +249,66 @@ function ReplyPreview({ replyTo }) {
   );
 }
 
-/* ─── message content ───────────────────────────────────────── */
+/* ─── message content ───────────────────────────────────── */
 
-function MessageContent({ message }) {
-  const [modal, setModal] = useState(null); // null | "image" | "video"
+function MessageContent({ message, isSender, otherUser }) {
+  const [modal, setModal] = useState(null);
   const type = message.type || "text";
 
   if (message.isDeleted) {
-    return (
-      <p className="italic text-gray-400 text-[14px]">🚫 This message was deleted</p>
-    );
+    return <p className="italic text-gray-400 text-[14px]">🚫 This message was deleted</p>;
   }
 
+  /* IMAGE ── WhatsApp style with time overlay */
   if (type === "image") {
     return (
       <>
-        <div className="relative group/img cursor-pointer" onClick={() => setModal("image")}>
+        <div
+          className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden"
+          onClick={() => setModal("image")}
+        >
           <img
             src={message.fileUrl}
-            alt={message.fileName}
-            className="rounded-xl max-w-[260px] w-full object-cover"
+            alt={message.fileName || "image"}
+            className="w-full h-auto object-cover"
+            loading="lazy"
           />
-          <a
-            href={message.fileUrl}
-            download={message.fileName}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-2 right-2 p-1.5 bg-black/50 rounded-full text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
-          >
-            <Download size={14} />
-          </a>
+          {/* Time + tick overlay */}
+          <div className="absolute bottom-0 right-0 px-2 py-1 bg-black/40 rounded-tl-xl flex items-center gap-1">
+            <span className="text-white text-[11px] leading-none">{formatTime(message.createdAt)}</span>
+            {isSender && <Tick status={message.status} white />}
+          </div>
         </div>
         {modal && <MediaModal type="image" src={message.fileUrl} onClose={() => setModal(null)} />}
       </>
     );
   }
 
+  /* VIDEO ── thumbnail + play overlay + duration */
   if (type === "video") {
     return (
       <>
         <div
-          className="relative cursor-pointer max-w-[260px] rounded-xl overflow-hidden"
+          className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden"
           onClick={() => setModal("video")}
         >
-          <video src={message.fileUrl} className="w-full rounded-xl" />
+          <video src={message.fileUrl} className="w-full h-48 object-cover" />
+          {/* Play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-              <Play size={22} className="text-gray-800 ml-0.5" />
+            <div className="w-14 h-14 rounded-full bg-white/80 flex items-center justify-center">
+              <Play size={24} className="text-gray-800 ml-1" />
             </div>
+          </div>
+          {/* Duration bottom-left */}
+          {message.duration && (
+            <div className="absolute bottom-2 left-2 bg-black/50 rounded px-1.5 py-0.5">
+              <span className="text-white text-[11px] tabular-nums">{formatDur(message.duration)}</span>
+            </div>
+          )}
+          {/* Time + tick bottom-right */}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1">
+            <span className="text-white text-[11px] leading-none">{formatTime(message.createdAt)}</span>
+            {isSender && <Tick status={message.status} white />}
           </div>
         </div>
         {modal && <MediaModal type="video" src={message.fileUrl} onClose={() => setModal(null)} />}
@@ -268,29 +316,35 @@ function MessageContent({ message }) {
     );
   }
 
+  /* AUDIO / VOICE NOTE ── WhatsApp waveform player */
   if (type === "audio") {
     return (
-      <AudioPlayer
-        src={message.fileUrl}
-        fileName={message.fileName}
-        msgDuration={message.duration}
-      />
+      <VoiceNotePlayer message={message} isSender={isSender} otherUser={otherUser} />
     );
   }
 
+  /* DOCUMENT ── colored icon square + filename + extension */
   if (type === "document") {
+    const { bg, color, label } = getDocStyle(message.fileName);
     return (
-      <div className="flex items-center gap-3 bg-white/80 rounded-xl p-3 min-w-[220px] max-w-[280px]">
-        <FileText size={30} className={clsx("shrink-0", docIconColor(message.fileName))} />
+      <div
+        className="flex items-center gap-3 bg-white/90 rounded-xl p-3 min-w-[220px] max-w-[280px] cursor-pointer hover:bg-white transition-colors"
+        onClick={() => window.open(message.fileUrl, "_blank")}
+      >
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+          <FileText size={24} className={color} />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-gray-800 truncate">{message.fileName}</p>
-          <p className="text-xs text-gray-400">{formatSize(message.fileSize)}</p>
+          <p className="font-medium text-sm text-gray-900 truncate">{message.fileName || "Document"}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {message.fileSize ? formatSize(message.fileSize) + " · " : ""}
+            {label}
+          </p>
         </div>
         <a
           href={message.fileUrl}
           download={message.fileName}
-          target="_blank"
-          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="text-purple-600 hover:text-purple-700 shrink-0"
         >
           <Download size={18} />
@@ -299,10 +353,12 @@ function MessageContent({ message }) {
     );
   }
 
+  /* POLL */
   if (type === "poll") {
     return <PollMessage message={message} />;
   }
 
+  /* TEXT */
   return (
     <p className="whitespace-pre-wrap break-words text-[15px] text-gray-900 leading-snug">
       {message.message}
@@ -310,7 +366,7 @@ function MessageContent({ message }) {
   );
 }
 
-/* ─── action menu ───────────────────────────────────────────── */
+/* ─── action menu ───────────────────────────────────────── */
 
 function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
   const hasMedia = !!(message.fileUrl);
@@ -320,10 +376,7 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
     onClose();
   };
 
-  const handleReply = () => {
-    onReply(message);
-    onClose();
-  };
+  const handleReply = () => { onReply(message); onClose(); };
 
   const handleDownload = () => {
     const a = document.createElement("a");
@@ -354,10 +407,7 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
           method: "DELETE",
           body: JSON.stringify({ deleteType: "foreveryone" }),
         });
-        // UI update happens via socket "message_deleted" event
-      } catch {
-        toast.error("Failed to delete message");
-      }
+      } catch { toast.error("Failed to delete message"); }
     } else if (result.isDenied) {
       try {
         await fetchClient(`/messages/${message._id}`, {
@@ -365,17 +415,15 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
           body: JSON.stringify({ deleteType: "forme" }),
         });
         onSelfDelete?.(message._id);
-      } catch {
-        toast.error("Failed to delete message");
-      }
+      } catch { toast.error("Failed to delete message"); }
     }
   };
 
   const items = [
-    { icon: Copy,    label: "Copy",     onClick: handleCopy,     show: true },
-    { icon: Reply,   label: "Reply",    onClick: handleReply,    show: true },
+    { icon: Copy,     label: "Copy",     onClick: handleCopy,     show: true },
+    { icon: Reply,    label: "Reply",    onClick: handleReply,    show: true },
     { icon: Download, label: "Download", onClick: handleDownload, show: hasMedia },
-    { icon: Trash2,  label: "Delete",   onClick: handleDelete,   show: isSender, danger: true },
+    { icon: Trash2,   label: "Delete",   onClick: handleDelete,   show: isSender, danger: true },
   ].filter((i) => i.show);
 
   return items.map((item) => (
@@ -384,9 +432,7 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
       onClick={item.onClick}
       className={clsx(
         "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
-        item.danger
-          ? "text-red-600 hover:bg-red-50"
-          : "text-gray-700 hover:bg-gray-50"
+        item.danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
       )}
     >
       <item.icon size={15} className="shrink-0" />
@@ -395,57 +441,45 @@ function ActionMenu({ message, isSender, onReply, onSelfDelete, onClose }) {
   ));
 }
 
-/* ─── main MessageBubble ────────────────────────────────────── */
+/* ─── main MessageBubble ────────────────────────────────── */
 
-export default function MessageBubble({ message, highlight, isCurrentResult, onReply, onSelfDelete }) {
+export default function MessageBubble({
+  message, highlight, isCurrentResult, onReply, onSelfDelete, otherUser,
+}) {
   const currentUserId = getUserId();
   const isSender =
     message.senderId?.toString() === currentUserId ||
     message.senderId === currentUserId;
 
-  const [showMenu,    setShowMenu]    = useState(false);
-  const [menuMobile,  setMenuMobile]  = useState(false); // bottom sheet on mobile
-  const longPressRef  = useRef(null);
-  const menuRef       = useRef(null);
+  const [showMenu,   setShowMenu]   = useState(false);
+  const [menuMobile, setMenuMobile] = useState(false);
+  const longPressRef = useRef(null);
+  const menuRef      = useRef(null);
 
   // Close desktop menu on outside click
   useEffect(() => {
     if (!showMenu) return;
-    const h = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
-    };
+    const h = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showMenu]);
 
-  // Long press for mobile
-  const onTouchStart = () => {
-    longPressRef.current = setTimeout(() => setMenuMobile(true), 500);
-  };
-  const onTouchEnd = () => clearTimeout(longPressRef.current);
+  const onTouchStart = () => { longPressRef.current = setTimeout(() => setMenuMobile(true), 500); };
+  const onTouchEnd   = () => clearTimeout(longPressRef.current);
+  const closeMenu    = () => { setShowMenu(false); setMenuMobile(false); };
 
-  const closeMenu = () => { setShowMenu(false); setMenuMobile(false); };
+  const type = message.type || "text";
+  // image/video have their own time overlay — skip the bottom meta row
+  const hideBottomMeta = !message.isDeleted && (type === "image" || type === "video");
 
   return (
     <>
       {/* Mobile bottom sheet */}
       {menuMobile && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-end md:hidden"
-          onClick={closeMenu}
-        >
-          <div
-            className="bg-white w-full rounded-t-2xl shadow-2xl py-2 pb-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-[9999] flex items-end md:hidden" onClick={closeMenu}>
+          <div className="bg-white w-full rounded-t-2xl shadow-2xl py-2 pb-6" onClick={(e) => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
-            <ActionMenu
-              message={message}
-              isSender={isSender}
-              onReply={onReply}
-              onSelfDelete={onSelfDelete}
-              onClose={closeMenu}
-            />
+            <ActionMenu message={message} isSender={isSender} onReply={onReply} onSelfDelete={onSelfDelete} onClose={closeMenu} />
           </div>
         </div>,
         document.body
@@ -458,9 +492,9 @@ export default function MessageBubble({ message, highlight, isCurrentResult, onR
         onTouchEnd={onTouchEnd}
         onTouchMove={onTouchEnd}
       >
-        {/* Desktop ⋯ button — receiver side (left of bubble) */}
+        {/* Desktop ⋯ — left of bubble for received */}
         {!isSender && (
-          <div ref={!isSender ? menuRef : undefined} className="relative hidden md:block shrink-0 self-center">
+          <div ref={menuRef} className="relative hidden md:block shrink-0 self-center">
             <button
               onClick={() => setShowMenu((p) => !p)}
               className="p-1 rounded-full text-gray-300 hover:text-gray-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -469,51 +503,46 @@ export default function MessageBubble({ message, highlight, isCurrentResult, onR
             </button>
             {showMenu && (
               <div className="absolute left-full ml-1 top-0 w-44 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 py-1 overflow-hidden">
-                <ActionMenu
-                  message={message}
-                  isSender={isSender}
-                  onReply={onReply}
-                  onSelfDelete={onSelfDelete}
-                  onClose={closeMenu}
-                />
+                <ActionMenu message={message} isSender={isSender} onReply={onReply} onSelfDelete={onSelfDelete} onClose={closeMenu} />
               </div>
             )}
           </div>
         )}
 
-        {/* The bubble itself */}
+        {/* Bubble */}
         <div
           className={clsx(
-            "max-w-[75%] md:max-w-[65%] px-3 py-2 rounded-2xl shadow-sm",
+            "max-w-[75%] md:max-w-[65%] rounded-2xl shadow-sm overflow-hidden",
+            // image/video: no padding (fills bubble edge to edge)
+            (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-2",
             isSender ? "bg-[#DCF8C6] rounded-br-sm" : "bg-white rounded-bl-sm",
             highlight && !isCurrentResult && "ring-2 ring-yellow-300",
             isCurrentResult && "ring-2 ring-yellow-500"
           )}
         >
-          {/* Quoted reply block */}
-          {message.replyTo && <ReplyPreview replyTo={message.replyTo} />}
+          {/* Quoted reply block — add padding back for media bubbles */}
+          {message.replyTo && (
+            <div className={clsx((type === "image" || type === "video") ? "px-3 pt-2" : "")}>
+              <ReplyPreview replyTo={message.replyTo} />
+            </div>
+          )}
 
-          <MessageContent message={message} />
+          <MessageContent message={message} isSender={isSender} otherUser={otherUser} />
 
-          <div className="flex items-center justify-end gap-1 mt-1">
-            <span className="text-[11px] text-gray-500 leading-none select-none">
-              {formatTime(message.createdAt)}
-            </span>
-            {isSender && (
-              message.status === "read" ? (
-                <CheckCheck size={13} className="text-blue-500 shrink-0" />
-              ) : message.status === "delivered" ? (
-                <CheckCheck size={13} className="text-gray-400 shrink-0" />
-              ) : (
-                <Check size={13} className="text-gray-400 shrink-0" />
-              )
-            )}
-          </div>
+          {/* Bottom meta: time + ticks (hidden for image/video — they have overlays) */}
+          {!hideBottomMeta && (
+            <div className="flex items-center justify-end gap-1 mt-1">
+              <span className="text-[11px] text-gray-500 leading-none select-none">
+                {formatTime(message.createdAt)}
+              </span>
+              {isSender && <Tick status={message.status} />}
+            </div>
+          )}
         </div>
 
-        {/* Desktop ⋯ button — sender side (right of bubble) */}
+        {/* Desktop ⋯ — right of bubble for sent */}
         {isSender && (
-          <div ref={isSender ? menuRef : undefined} className="relative hidden md:block shrink-0 self-center">
+          <div ref={menuRef} className="relative hidden md:block shrink-0 self-center">
             <button
               onClick={() => setShowMenu((p) => !p)}
               className="p-1 rounded-full text-gray-300 hover:text-gray-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -522,13 +551,7 @@ export default function MessageBubble({ message, highlight, isCurrentResult, onR
             </button>
             {showMenu && (
               <div className="absolute right-full mr-1 top-0 w-44 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 py-1 overflow-hidden">
-                <ActionMenu
-                  message={message}
-                  isSender={isSender}
-                  onReply={onReply}
-                  onSelfDelete={onSelfDelete}
-                  onClose={closeMenu}
-                />
+                <ActionMenu message={message} isSender={isSender} onReply={onReply} onSelfDelete={onSelfDelete} onClose={closeMenu} />
               </div>
             )}
           </div>

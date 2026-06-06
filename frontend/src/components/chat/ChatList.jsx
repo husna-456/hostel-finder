@@ -34,10 +34,11 @@ export default function ChatList({ activeConversationId, onSelect }) {
   useEffect(() => {
     if (!socket) return;
     const getPreview = (msg) => {
+      if (msg.isDeleted) return "🚫 This message was deleted";
       switch (msg.type) {
         case "image":    return "📷 Photo";
-        case "video":    return "🎬 Video";
-        case "audio":    return "🎵 Audio";
+        case "video":    return "🎥 Video";
+        case "audio":    return "🎤 Voice note";
         case "document": return `📄 ${msg.fileName || "Document"}`;
         case "poll":     return "📊 Poll";
         default:         return msg.message;

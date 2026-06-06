@@ -424,6 +424,7 @@ export default function ChatWindow({ conversation, onBack }) {
                 isCurrentResult={chatSearch.trim() !== "" && searchResults[searchIdx]?._id === msg._id}
                 onReply={setReplyTo}
                 onSelfDelete={handleSelfDelete}
+                otherUser={otherUser}
               />
             </div>
           ))
