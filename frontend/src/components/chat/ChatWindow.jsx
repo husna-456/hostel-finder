@@ -115,8 +115,10 @@ const handleFocusOut = () => {
     if (!socket) return;
 
     const onReceive = (msg) => {
-      if (msg.conversationId === conversation._id)
+      if (msg.conversationId === conversation._id) {
         setMessages((prev) => [...prev, msg]);
+        socket.emit("mark_seen", { conversationId: conversation._id, messageId: msg._id });
+      }
     };
     const onAck = (realMsg) => {
       setMessages((prev) =>
