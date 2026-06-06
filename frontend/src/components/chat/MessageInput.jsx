@@ -4,18 +4,18 @@ import { getUserId } from "../../utils/auth";
 import { uploadFile } from "../../utils/uploadToSupabase";
 import { RiSendPlaneFill } from "react-icons/ri";
 import {
-  Plus, Smile, FileText, Image, Mic, BarChart2,
-  X, Loader2, MicOff, Reply,
+  Plus, Smile, FileText, Image, Mic, BarChart2, Music,
+  X, Loader2, Reply,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import EmojiPicker from "emoji-picker-react";
 import clsx from "clsx";
 
 const ATTACHMENTS = [
-  { label: "Document",        icon: FileText,  color: "text-blue-500",   bg: "bg-blue-50"   },
-  { label: "Photos & Videos", icon: Image,     color: "text-green-500",  bg: "bg-green-50"  },
-  { label: "Audio",           icon: Mic,       color: "text-orange-500", bg: "bg-orange-50" },
-  { label: "Poll",            icon: BarChart2, color: "text-purple-500", bg: "bg-purple-50" },
+  { label: "Document",        icon: FileText,  iconColor: "text-blue-600",   circleBg: "bg-blue-100"   },
+  { label: "Photos & Videos", icon: Image,     iconColor: "text-green-600",  circleBg: "bg-green-100"  },
+  { label: "Audio",           icon: Music,     iconColor: "text-orange-600", circleBg: "bg-orange-100" },
+  { label: "Poll",            icon: BarChart2, iconColor: "text-purple-600", circleBg: "bg-purple-100" },
 ];
 
 function PollModal({ onClose, onSubmit }) {
@@ -356,27 +356,28 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
             <button
               type="button"
               onClick={() => { setShowAttach((p) => !p); setShowEmoji(false); }}
-              className="flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors p-0.5"
+              className="flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors p-0.5 cursor-pointer"
               aria-label="Attach"
             >
               <Plus size={20} />
             </button>
 
             {showAttach && (
-              <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-52">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Attach</span>
-                  <button onClick={() => setShowAttach(false)} className="text-gray-400 hover:text-gray-600"><X size={13} /></button>
-                </div>
-                <div className="space-y-1">
-                  {ATTACHMENTS.map(({ label, icon: Icon, color, bg }) => (
+              <div className="absolute bottom-full mb-3 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 min-w-[210px]">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-1 pb-2">
+                  Attach
+                </p>
+                <div className="flex flex-col">
+                  {ATTACHMENTS.map(({ label, icon: Icon, iconColor, circleBg }) => (
                     <button
                       key={label}
                       onClick={() => handleAttachClick(label)}
-                      className={`flex items-center gap-3 w-full px-3 py-2 rounded-xl ${bg} hover:opacity-90 transition-opacity text-sm font-medium text-gray-700`}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer text-sm font-medium text-gray-700 group"
                     >
-                      <Icon size={15} className={`${color} shrink-0`} />
-                      {label}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${circleBg} shrink-0 group-hover:scale-110 transition-transform`}>
+                        <Icon size={18} className={iconColor} />
+                      </div>
+                      <span>{label}</span>
                     </button>
                   ))}
                 </div>
