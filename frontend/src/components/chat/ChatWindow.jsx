@@ -178,6 +178,16 @@ export default function ChatWindow({ conversation, onBack }) {
       );
     };
 
+    const onReaction = ({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id?.toString() === messageId || m._id === messageId
+            ? { ...m, reactions }
+            : m
+        )
+      );
+    };
+
     socket.on("receive_message",   onReceive);
     socket.on("message_ack",       onAck);
     socket.on("message_delivered", onDelivered);
@@ -187,6 +197,7 @@ export default function ChatWindow({ conversation, onBack }) {
     socket.on("user_status_change",onStatus);
     socket.on("poll_updated",      onPollUpdated);
     socket.on("message_deleted",   onDeleted);
+    socket.on("message_reaction",  onReaction);
 
     return () => {
       socket.off("receive_message",   onReceive);
@@ -198,6 +209,7 @@ export default function ChatWindow({ conversation, onBack }) {
       socket.off("user_status_change",onStatus);
       socket.off("poll_updated",      onPollUpdated);
       socket.off("message_deleted",   onDeleted);
+      socket.off("message_reaction",  onReaction);
     };
   }, [socket, conversation._id, currentUserId, otherUser?._id]);
 

@@ -92,6 +92,40 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
+export const reactToMessage = async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const userId = req.user._id.toString();
+
+    const msg = await Message.findById(req.params.messageId);
+    if (!msg) return res.status(404).json({ message: "Message not found" });
+
+    const existing = msg.reactions.find((r) => r.userId.toString() === userId);
+
+    // Remove this user's current reaction (if any)
+    msg.reactions = msg.reactions.filter((r) => r.userId.toString() !== userId);
+
+    // Add new emoji only if different from existing (same emoji = toggle off)
+    if (!existing || existing.emoji !== emoji) {
+      msg.reactions.push({ emoji, userId: req.user._id });
+    }
+
+    await msg.save();
+
+    try {
+      const io = getIO();
+      io.to(msg.conversationId.toString()).emit("message_reaction", {
+        messageId: msg._id.toString(),
+        reactions: msg.reactions,
+      });
+    } catch (_) {}
+
+    res.json({ reactions: msg.reactions });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const votePoll = async (req, res) => {
   try {
     const { optionIndex } = req.body;

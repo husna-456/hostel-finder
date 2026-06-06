@@ -9,11 +9,12 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
 export default function ChatList({ activeConversationId, onSelect }) {
-  const [conversations, setConversations] = useState([]);
-  const [searchQuery,   setSearchQuery]   = useState("");
-  const [onlineMap,     setOnlineMap]     = useState({});
-  const [menuOpen,      setMenuOpen]      = useState(false);
-  const [showArchived,  setShowArchived]  = useState(false);
+  const [conversations,  setConversations]  = useState([]);
+  const [searchQuery,    setSearchQuery]    = useState("");
+  const [onlineMap,      setOnlineMap]      = useState({});
+  const [menuOpen,       setMenuOpen]       = useState(false);
+  const [showArchived,   setShowArchived]   = useState(false);
+  const [lastSenderMap,  setLastSenderMap]  = useState({});
 
   const userId      = getUserId();
   const role        = getUserRole();
@@ -45,6 +46,8 @@ export default function ChatList({ activeConversationId, onSelect }) {
       }
     };
     const onReceive = (msg) => {
+      // Track sender: receive_message always comes from the OTHER user
+      setLastSenderMap(prev => ({ ...prev, [msg.conversationId]: msg.senderId }));
       setConversations(prev =>
         prev.map(c =>
           c._id === msg.conversationId
@@ -70,6 +73,10 @@ export default function ChatList({ activeConversationId, onSelect }) {
     if (!socket) return;
     const onUnreadUpdate = ({ conversationId, unreadCount, lastMessage }) => {
       const now = new Date().toISOString();
+      // unread_count_update with count=0 and lastMessage means current user sent it
+      if (unreadCount === 0 && lastMessage !== undefined) {
+        setLastSenderMap(prev => ({ ...prev, [conversationId]: userId }));
+      }
       setConversations(prev =>
         prev.map(c =>
           c._id === conversationId
@@ -295,6 +302,7 @@ export default function ChatList({ activeConversationId, onSelect }) {
                 onClick={() => handleSelect(c)}
                 isOnline={status.isOnline}
                 lastSeen={status.lastSeen}
+                lastSenderIsMe={lastSenderMap[c._id] === userId}
               />
             );
           })
@@ -328,6 +336,7 @@ export default function ChatList({ activeConversationId, onSelect }) {
                   onClick={() => handleSelect(c)}
                   isOnline={status.isOnline}
                   lastSeen={status.lastSeen}
+                  lastSenderIsMe={lastSenderMap[c._id] === userId}
                 />
               );
             })}

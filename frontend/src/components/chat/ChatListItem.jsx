@@ -1,11 +1,28 @@
 import clsx from "clsx";
+import { Camera, Video, Mic, FileText, BarChart2 } from "lucide-react";
 
-export default function ChatListItem({ conversation, active, onClick, isOnline }) {
+function parsePreview(str) {
+  if (!str) return { Icon: null, text: null, italic: false };
+  if (str.startsWith("📷")) return { Icon: Camera,     text: "Photo",                          italic: false };
+  if (str.startsWith("🎥")) return { Icon: Video,      text: "Video",                          italic: false };
+  if (str.startsWith("🎤")) return { Icon: Mic,        text: "Voice note",                     italic: false };
+  if (str.startsWith("📄 ")) return { Icon: FileText,  text: str.slice(3) || "Document",       italic: false };
+  if (str.startsWith("📊 ")) return { Icon: BarChart2, text: str.slice(3) || "Poll",           italic: false };
+  if (str.startsWith("🚫")) return { Icon: null,       text: "This message was deleted",       italic: true  };
+  return { Icon: null, text: str, italic: false };
+}
+
+export default function ChatListItem({
+  conversation, active, onClick, isOnline, lastSenderIsMe,
+}) {
   const otherUser = conversation.clientId?.name
     ? conversation.clientId
     : conversation.ownerId;
 
   const initial = (otherUser?.name || "?").charAt(0).toUpperCase();
+  const hasUnread = conversation.unreadCount > 0;
+
+  const { Icon, text, italic } = parsePreview(conversation.lastMessage);
 
   return (
     <div
@@ -36,7 +53,7 @@ export default function ChatListItem({ conversation, active, onClick, isOnline }
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className={clsx("text-[15px] text-gray-900 truncate", conversation.unreadCount > 0 ? "font-bold" : "font-semibold")}>
+          <span className={clsx("text-[15px] text-gray-900 truncate", hasUnread ? "font-bold" : "font-semibold")}>
             {otherUser?.name || "User"}
           </span>
           <span className="text-xs text-gray-400 shrink-0">
@@ -47,10 +64,23 @@ export default function ChatListItem({ conversation, active, onClick, isOnline }
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className={clsx("text-sm truncate", conversation.unreadCount > 0 ? "text-gray-800 font-medium" : "text-gray-500")}>
-            {conversation.lastMessage || "Start a conversation"}
-          </p>
-          {conversation.unreadCount > 0 && (
+          {/* Preview line: [You:] [Icon] [text] */}
+          <div className={clsx(
+            "text-sm flex items-center gap-1 min-w-0",
+            hasUnread ? "text-gray-800 font-medium" : "text-gray-500"
+          )}>
+            {lastSenderIsMe && (
+              <span className="shrink-0 font-normal">You:</span>
+            )}
+            {Icon && (
+              <Icon size={13} className="shrink-0 opacity-70" />
+            )}
+            <span className={clsx("truncate", italic && "italic")}>
+              {text || "Start a conversation"}
+            </span>
+          </div>
+
+          {hasUnread && (
             <span className="bg-green-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full shrink-0 font-medium">
               {conversation.unreadCount}
             </span>

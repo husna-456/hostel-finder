@@ -53,6 +53,12 @@ const messageSchema = new mongoose.Schema(
     isDeleted:  { type: Boolean, default: false },
     deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+    reactions: [{
+      _id: false,
+      emoji:  { type: String },
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    }],
+
     poll: {
       question: String,
       options: [{
