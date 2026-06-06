@@ -1,17 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useSocketContext } from "../../context/SocketContext";
 import { getUserId } from "../../utils/auth";
+import { uploadFile } from "../../utils/uploadToSupabase";
 import { RiSendPlaneFill } from "react-icons/ri";
-import { Plus, Smile, FileText, Image, Mic, BarChart2, X, Loader2 } from "lucide-react";
+import {
+  Plus, Smile, FileText, Image, Mic, BarChart2,
+  X, Loader2, MicOff, Reply,
+} from "lucide-react";
 import { toast } from "react-toastify";
-import { supabase } from "../../lib/supabaseClient";
-
-const EMOJIS = [
-  "😀","😂","😍","🥰","😊","😎","🤔","😢","😡","🤗",
-  "👍","👎","❤️","🔥","🎉","✅","👏","🙏","💯","⭐",
-  "😭","😅","🤣","😇","🤩","😴","🥳","😜","🙄","😬",
-  "💪","🤝","✌️","👋","🫡","💡","🎯","⚡","🌹","🍕",
-];
+import EmojiPicker from "emoji-picker-react";
+import clsx from "clsx";
 
 const ATTACHMENTS = [
   { label: "Document",        icon: FileText,  color: "text-blue-500",   bg: "bg-blue-50"   },
@@ -22,19 +20,11 @@ const ATTACHMENTS = [
 
 function PollModal({ onClose, onSubmit }) {
   const [question, setQuestion] = useState("");
-  const [options, setOptions] = useState(["", ""]);
+  const [options,  setOptions]  = useState(["", ""]);
 
-  const addOption = () => {
-    if (options.length < 4) setOptions((p) => [...p, ""]);
-  };
-
-  const removeOption = (idx) => {
-    setOptions((p) => p.filter((_, i) => i !== idx));
-  };
-
-  const setOption = (idx, val) => {
-    setOptions((p) => p.map((o, i) => (i === idx ? val : o)));
-  };
+  const addOption    = () => { if (options.length < 4) setOptions((p) => [...p, ""]); };
+  const removeOption = (i) => setOptions((p) => p.filter((_, j) => j !== i));
+  const setOption    = (i, v) => setOptions((p) => p.map((o, j) => (j === i ? v : o)));
 
   const handleSubmit = () => {
     if (!question.trim()) { toast.error("Question is required"); return; }
@@ -48,17 +38,13 @@ function PollModal({ onClose, onSubmit }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 text-base">Create Poll</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={18} />
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
         <div className="mb-3">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Question</label>
           <input
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            type="text" value={question} onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask a question…"
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
@@ -70,9 +56,7 @@ function PollModal({ onClose, onSubmit }) {
             {options.map((opt, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <input
-                  type="text"
-                  value={opt}
-                  onChange={(e) => setOption(idx, e.target.value)}
+                  type="text" value={opt} onChange={(e) => setOption(idx, e.target.value)}
                   placeholder={`Option ${idx + 1}`}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
@@ -85,26 +69,17 @@ function PollModal({ onClose, onSubmit }) {
             ))}
           </div>
           {options.length < 4 && (
-            <button
-              onClick={addOption}
-              className="mt-2 text-xs text-purple-600 hover:text-purple-700 font-medium"
-            >
+            <button onClick={addOption} className="mt-2 text-xs text-purple-600 hover:text-purple-700 font-medium">
               + Add option
             </button>
           )}
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handleSubmit}
-            className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
-          >
+          <button onClick={handleSubmit} className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors">
             Create Poll
           </button>
         </div>
@@ -113,23 +88,36 @@ function PollModal({ onClose, onSubmit }) {
   );
 }
 
-export default function MessageInput({ conversationId, onSend }) {
+function formatRecDur(s) {
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+export default function MessageInput({ conversationId, onSend, replyTo, clearReply }) {
   const socket        = useSocketContext();
   const currentUserId = getUserId();
 
-  const [text,          setText]          = useState("");
-  const [showEmoji,     setShowEmoji]     = useState(false);
-  const [showAttach,    setShowAttach]    = useState(false);
-  const [uploading,     setUploading]     = useState(false);
-  const [showPollModal, setShowPollModal] = useState(false);
+  const [text,           setText]           = useState("");
+  const [showEmoji,      setShowEmoji]      = useState(false);
+  const [showAttach,     setShowAttach]     = useState(false);
+  const [uploading,      setUploading]      = useState(false);
+  const [showPollModal,  setShowPollModal]  = useState(false);
+  const [isRecording,    setIsRecording]    = useState(false);
+  const [recDuration,    setRecDuration]    = useState(0);
 
-  const typingRef     = useRef(null);
-  const emojiWrapRef  = useRef(null);
-  const attachWrapRef = useRef(null);
-  const docInputRef   = useRef(null);
-  const mediaInputRef = useRef(null);
-  const audioInputRef = useRef(null);
+  const typingRef        = useRef(null);
+  const emojiWrapRef     = useRef(null);
+  const attachWrapRef    = useRef(null);
+  const docInputRef      = useRef(null);
+  const mediaInputRef    = useRef(null);
+  const audioInputRef    = useRef(null);
+  const mediaRecRef      = useRef(null);
+  const audioChunksRef   = useRef([]);
+  const recTimerRef      = useRef(null);
+  const streamRef        = useRef(null);
+  const cancelledRef     = useRef(false);
 
+  // Close emoji/attach on outside click
   useEffect(() => {
     const h = (e) => {
       if (emojiWrapRef.current  && !emojiWrapRef.current.contains(e.target))  setShowEmoji(false);
@@ -154,13 +142,24 @@ export default function MessageInput({ conversationId, onSend }) {
     if (!text.trim() || !socket) return;
     const tempId = `temp_${Date.now()}`;
     onSend({
-      _id: tempId, message: text, senderId: currentUserId,
-      conversationId, createdAt: new Date(), status: "sent",
+      _id: tempId,
+      message: text,
+      senderId: currentUserId,
+      conversationId,
+      createdAt: new Date(),
+      status: "sent",
+      replyTo: replyTo || null,
     });
     clearTimeout(typingRef.current);
     socket.emit("stop_typing",  { conversationId });
-    socket.emit("send_message", { conversationId, text, tempId });
+    socket.emit("send_message", {
+      conversationId,
+      text,
+      tempId,
+      replyTo: replyTo?._id || null,
+    });
     setText("");
+    clearReply?.();
     setShowEmoji(false);
   };
 
@@ -168,105 +167,191 @@ export default function MessageInput({ conversationId, onSend }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
-  const uploadFile = async (file) => {
-    const ext = file.name.split('.').pop();
-    const path = `chat-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('hostel-images').upload(path, file);
-    if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from('hostel-images').getPublicUrl(path);
-    return data.publicUrl;
+  /* ── file upload helper ── */
+  const uploadFileToSupabase = async (file) => {
+    const ext  = file.name.split(".").pop();
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    return uploadFile(file, "chat-media", name);
   };
 
-  const sendFileMessage = async (file, type) => {
+  /* ── send a file message ── */
+  const sendFileMessage = async (file, defaultType) => {
     const tempId = `temp_${Date.now()}`;
     setUploading(true);
     try {
-      const fileUrl = await uploadFile(file);
-      const msgType = file.type.startsWith('video/') ? 'video'
-        : file.type.startsWith('image/') ? 'image'
-        : type;
+      const fileUrl = await uploadFileToSupabase(file);
+      const msgType = file.type.startsWith("video/") ? "video"
+        : file.type.startsWith("image/") ? "image"
+        : defaultType;
 
       onSend({
         _id: tempId, message: file.name, type: msgType,
         fileUrl, fileName: file.name, fileSize: file.size,
         senderId: currentUserId, conversationId,
-        createdAt: new Date(), status: 'sent',
+        createdAt: new Date(), status: "sent",
+        replyTo: replyTo || null,
       });
       clearTimeout(typingRef.current);
-      socket.emit('stop_typing', { conversationId });
-      socket.emit('send_message', {
+      socket.emit("stop_typing", { conversationId });
+      socket.emit("send_message", {
         conversationId, text: file.name, tempId,
         type: msgType, fileUrl, fileName: file.name, fileSize: file.size,
+        replyTo: replyTo?._id || null,
       });
+      clearReply?.();
     } catch (err) {
-      toast.error('Upload failed: ' + err.message);
+      toast.error("Upload failed: " + err.message);
     } finally {
       setUploading(false);
     }
   };
 
+  /* ── poll ── */
   const sendPollMessage = (question, options) => {
     const tempId = `temp_${Date.now()}`;
-    const poll = { question, options: options.map(text => ({ text, votes: [] })) };
+    const poll   = { question, options: options.map((t) => ({ text: t, votes: [] })) };
     onSend({
-      _id: tempId, message: question, type: 'poll', poll,
+      _id: tempId, message: question, type: "poll", poll,
       senderId: currentUserId, conversationId,
-      createdAt: new Date(), status: 'sent',
+      createdAt: new Date(), status: "sent",
     });
-    socket.emit('send_message', { conversationId, text: question, type: 'poll', poll, tempId });
+    socket.emit("send_message", { conversationId, text: question, type: "poll", poll, tempId });
     setShowPollModal(false);
   };
 
-  const handleDocChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) sendFileMessage(file, 'document');
-    e.target.value = '';
-  };
+  /* ── voice note recording ── */
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+      cancelledRef.current = false;
 
-  const handleMediaChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) sendFileMessage(file, 'image');
-    e.target.value = '';
-  };
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (cancelledRef.current) return;
 
-  const handleAudioChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) sendFileMessage(file, 'audio');
-    e.target.value = '';
-  };
+        const blob     = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const duration = recDuration;
+        const label    = `Voice note (${formatRecDur(duration)})`;
 
-  const handleAttachClick = (label) => {
-    if (label === "Document") {
-      docInputRef.current?.click();
-      setShowAttach(false);
-    } else if (label === "Photos & Videos") {
-      mediaInputRef.current?.click();
-      setShowAttach(false);
-    } else if (label === "Audio") {
-      audioInputRef.current?.click();
-      setShowAttach(false);
-    } else if (label === "Poll") {
-      setShowPollModal(true);
-      setShowAttach(false);
+        setUploading(true);
+        try {
+          const url    = await uploadFile(blob, "voice-notes", `voice_${Date.now()}.webm`);
+          const tempId = `temp_${Date.now()}`;
+          onSend({
+            _id: tempId, message: label, type: "audio",
+            fileUrl: url, duration,
+            senderId: currentUserId, conversationId,
+            createdAt: new Date(), status: "sent",
+          });
+          socket.emit("send_message", {
+            conversationId, text: label, type: "audio",
+            fileUrl: url, duration, tempId,
+          });
+        } catch (err) {
+          toast.error("Failed to send voice note: " + err.message);
+        } finally {
+          setUploading(false);
+        }
+      };
+
+      recorder.start();
+      mediaRecRef.current = recorder;
+      setIsRecording(true);
+      setRecDuration(0);
+      recTimerRef.current = setInterval(() => setRecDuration((d) => d + 1), 1000);
+    } catch {
+      toast.error("Microphone access required for voice notes");
     }
   };
 
+  const stopRecording = (cancel = false) => {
+    cancelledRef.current = cancel;
+    clearInterval(recTimerRef.current);
+    mediaRecRef.current?.stop();
+    setIsRecording(false);
+    setRecDuration(0);
+  };
+
+  /* ── file input handlers ── */
+  const handleDocChange   = (e) => { const f = e.target.files?.[0]; if (f) sendFileMessage(f, "document"); e.target.value = ""; };
+  const handleMediaChange = (e) => { const f = e.target.files?.[0]; if (f) sendFileMessage(f, "image");    e.target.value = ""; };
+  const handleAudioChange = (e) => { const f = e.target.files?.[0]; if (f) sendFileMessage(f, "audio");    e.target.value = ""; };
+
+  const handleAttachClick = (label) => {
+    if (label === "Document")        { docInputRef.current?.click();   setShowAttach(false); }
+    else if (label === "Photos & Videos") { mediaInputRef.current?.click(); setShowAttach(false); }
+    else if (label === "Audio")      { audioInputRef.current?.click(); setShowAttach(false); }
+    else if (label === "Poll")       { setShowPollModal(true);         setShowAttach(false); }
+  };
+
+  /* ── recording UI ── */
+  if (isRecording) {
+    return (
+      <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0">
+        <div className="flex items-center gap-3 bg-red-50 rounded-full px-4 py-2 border border-red-200">
+          <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse shrink-0" />
+          <span className="flex-1 text-sm font-medium text-red-600 tabular-nums">
+            {formatRecDur(recDuration)}
+          </span>
+          <button
+            onClick={() => stopRecording(true)}
+            className="p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 transition-colors"
+            aria-label="Cancel recording"
+          >
+            <X size={16} />
+          </button>
+          <button
+            onClick={() => stopRecording(false)}
+            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors"
+            aria-label="Send voice note"
+          >
+            <RiSendPlaneFill size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0">
-      <input ref={docInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx" onChange={handleDocChange} />
+      {/* Hidden file inputs */}
+      <input ref={docInputRef}   type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx" onChange={handleDocChange} />
       <input ref={mediaInputRef} type="file" className="hidden" accept="image/*,video/*" onChange={handleMediaChange} />
       <input ref={audioInputRef} type="file" className="hidden" accept="audio/*" onChange={handleAudioChange} />
 
+      {/* Modals */}
       {showPollModal && (
-        <PollModal
-          onClose={() => setShowPollModal(false)}
-          onSubmit={sendPollMessage}
-        />
+        <PollModal onClose={() => setShowPollModal(false)} onSubmit={sendPollMessage} />
+      )}
+
+      {/* Reply preview bar */}
+      {replyTo && (
+        <div className="flex items-center gap-2 bg-gray-50 border-l-4 border-purple-500 px-3 py-2 rounded mb-2">
+          <Reply size={14} className="text-purple-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-purple-600 truncate">
+              Replying to {replyTo.senderId?.name || replyTo.senderName || "message"}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {replyTo.type === "text" ? replyTo.message : replyTo.fileName || replyTo.type}
+            </p>
+          </div>
+          <button onClick={clearReply} className="text-gray-400 hover:text-gray-600 shrink-0">
+            <X size={15} />
+          </button>
+        </div>
       )}
 
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-1 bg-gray-100 rounded-full px-3 py-2 border border-gray-200">
 
+          {/* Attach menu */}
           <div ref={attachWrapRef} className="relative shrink-0">
             <button
               type="button"
@@ -281,9 +366,7 @@ export default function MessageInput({ conversationId, onSend }) {
               <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-52">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Attach</span>
-                  <button onClick={() => setShowAttach(false)} className="text-gray-400 hover:text-gray-600">
-                    <X size={13} />
-                  </button>
+                  <button onClick={() => setShowAttach(false)} className="text-gray-400 hover:text-gray-600"><X size={13} /></button>
                 </div>
                 <div className="space-y-1">
                   {ATTACHMENTS.map(({ label, icon: Icon, color, bg }) => (
@@ -301,6 +384,7 @@ export default function MessageInput({ conversationId, onSend }) {
             )}
           </div>
 
+          {/* Emoji picker */}
           <div ref={emojiWrapRef} className="relative shrink-0">
             <button
               type="button"
@@ -312,28 +396,27 @@ export default function MessageInput({ conversationId, onSend }) {
             </button>
 
             {showEmoji && (
-              <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-72">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Emoji</span>
-                  <button onClick={() => setShowEmoji(false)} className="text-gray-400 hover:text-gray-600">
-                    <X size={13} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-8 gap-0.5">
-                  {EMOJIS.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => { setText((p) => p + e); setShowEmoji(false); }}
-                      className="text-xl hover:bg-gray-100 rounded-lg p-1 transition-colors leading-none"
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
+              <div
+                className={clsx(
+                  "z-50",
+                  // Mobile: fixed above keyboard; Desktop: absolute
+                  "fixed bottom-20 left-2 right-2",
+                  "md:absolute md:bottom-full md:mb-2 md:left-0 md:right-auto"
+                )}
+              >
+                <EmojiPicker
+                  onEmojiClick={(d) => setText((p) => p + d.emoji)}
+                  width="100%"
+                  height={380}
+                  searchPlaceholder="Search emoji…"
+                  lazyLoadEmojis
+                  style={{ maxWidth: "100%", borderRadius: "16px" }}
+                />
               </div>
             )}
           </div>
 
+          {/* Text area */}
           <textarea
             rows={1}
             value={text}
@@ -345,15 +428,25 @@ export default function MessageInput({ conversationId, onSend }) {
             placeholder={uploading ? "Uploading…" : "Write your message…"}
           />
 
-          {uploading && (
-            <Loader2 size={18} className="text-purple-500 animate-spin shrink-0" />
-          )}
+          {uploading && <Loader2 size={18} className="text-purple-500 animate-spin shrink-0" />}
+
+          {/* Mic button */}
+          <button
+            type="button"
+            onClick={startRecording}
+            disabled={uploading}
+            className="flex items-center justify-center text-gray-600 hover:text-purple-600 transition-colors p-0.5 shrink-0 disabled:opacity-40"
+            aria-label="Record voice note"
+          >
+            <Mic size={20} />
+          </button>
         </div>
 
+        {/* Send button */}
         <button
           type="button"
           onClick={send}
-          disabled={uploading}
+          disabled={uploading || !text.trim()}
           className="w-9 h-9 flex items-center justify-center bg-purple-600 hover:bg-purple-700
                      text-white rounded-full transition-colors shrink-0 disabled:opacity-60"
           aria-label="Send"

@@ -33,13 +33,23 @@ export default function ChatList({ activeConversationId, onSelect }) {
   /* real-time: incoming message → badge increment + lastMessage + resort */
   useEffect(() => {
     if (!socket) return;
+    const getPreview = (msg) => {
+      switch (msg.type) {
+        case "image":    return "📷 Photo";
+        case "video":    return "🎬 Video";
+        case "audio":    return "🎵 Audio";
+        case "document": return `📄 ${msg.fileName || "Document"}`;
+        case "poll":     return "📊 Poll";
+        default:         return msg.message;
+      }
+    };
     const onReceive = (msg) => {
       setConversations(prev =>
         prev.map(c =>
           c._id === msg.conversationId
             ? {
                 ...c,
-                lastMessage: msg.message,
+                lastMessage: getPreview(msg),
                 updatedAt: msg.createdAt || new Date().toISOString(),
                 unreadCount:
                   activeConvRef.current === msg.conversationId

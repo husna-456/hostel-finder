@@ -23,7 +23,7 @@ const messageSchema = new mongoose.Schema(
 
     message: {
       type: String,
-      required: true,
+      default: "",
     },
 
     status: {
@@ -33,20 +33,32 @@ const messageSchema = new mongoose.Schema(
     },
     deliveredAt: { type: Date, default: null },
     seenAt:      { type: Date, default: null },
+
     type: {
       type: String,
-      enum: ['text', 'image', 'video', 'audio', 'document', 'poll'],
-      default: 'text',
+      enum: ["text", "image", "video", "audio", "document", "poll"],
+      default: "text",
     },
-    fileUrl:  { type: String, default: null },
-    fileName: { type: String, default: null },
-    fileSize: { type: Number, default: null },
+    fileUrl:   { type: String, default: null },
+    fileName:  { type: String, default: null },
+    fileSize:  { type: Number, default: null },
+    duration:  { type: Number, default: null },  // seconds for audio/voice
+
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+
+    isDeleted:  { type: Boolean, default: false },
+    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
     poll: {
       question: String,
       options: [{
         _id: false,
         text: String,
-        votes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+        votes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       }],
     },
   },

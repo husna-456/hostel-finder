@@ -5,6 +5,12 @@ import Message from "../models/Message.js";
 import Conversation from "../models/Conversation.js";
 import User from "../models/User.js";
 
+const REPLY_POPULATE = {
+  path: "replyTo",
+  select: "message type fileName senderId",
+  populate: { path: "senderId", select: "name" },
+};
+
 export const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
@@ -31,7 +37,6 @@ export const initSocket = (server) => {
     socket.on("join_conversation", async (conversationId) => {
       socket.join(conversationId);
 
-      // Mark all unread messages (where this user is receiver) as read
       try {
         const unread = await Message.find({
           conversationId,
@@ -46,7 +51,6 @@ export const initSocket = (server) => {
             { status: "read", seenAt: now }
           );
 
-          // Notify each sender
           const senderIds = [...new Set(unread.map((m) => m.senderId.toString()))];
           senderIds.forEach((sid) => {
             io.to(sid).emit("messages_seen", { conversationId, seenBy: userId });
@@ -67,7 +71,7 @@ export const initSocket = (server) => {
       socket.leave(conversationId);
     });
 
-    // ── MARK SEEN (fired when user clicks a conversation) ──────────────────────
+    // ── MARK SEEN ─────────────────────────────────────────────────────────────
     socket.on("mark_seen", async ({ conversationId }) => {
       try {
         const unread = await Message.find({
@@ -98,104 +102,126 @@ export const initSocket = (server) => {
     });
 
     // ── SEND MESSAGE ───────────────────────────────────────────────────────────
-    socket.on("send_message", async ({ conversationId, text, tempId, type = 'text', fileUrl, fileName, fileSize, poll }) => {
-      try {
-        if (!text?.trim()) return;
+    socket.on(
+      "send_message",
+      async ({
+        conversationId,
+        text,
+        tempId,
+        type = "text",
+        fileUrl,
+        fileName,
+        fileSize,
+        duration,
+        poll,
+        replyTo,
+      }) => {
+        try {
+          // For non-text messages allow empty text (use type as fallback check)
+          const hasContent = (text && text.trim()) || fileUrl || poll;
+          if (!hasContent) return;
 
-        const convo = await Conversation.findById(conversationId);
-        if (!convo) return;
+          const convo = await Conversation.findById(conversationId);
+          if (!convo) return;
 
-        const senderId = socket.user.id;
-        let receiverId;
+          const senderId = socket.user.id;
+          let receiverId;
 
-        if (senderId === convo.clientId.toString()) {
-          receiverId = convo.ownerId.toString();
-        } else if (senderId === convo.ownerId.toString()) {
-          receiverId = convo.clientId.toString();
-        } else {
-          return;
-        }
+          if (senderId === convo.clientId.toString()) {
+            receiverId = convo.ownerId.toString();
+          } else if (senderId === convo.ownerId.toString()) {
+            receiverId = convo.clientId.toString();
+          } else {
+            return;
+          }
 
-        const msgData = {
-          conversationId,
-          senderId,
-          receiverId,
-          message: text,
-          status: "sent",
-          type,
-        };
-        if (fileUrl)  msgData.fileUrl  = fileUrl;
-        if (fileName) msgData.fileName = fileName;
-        if (fileSize) msgData.fileSize = fileSize;
-        if (poll)     msgData.poll     = poll;
-
-        const message = await Message.create(msgData);
-
-        const convRoom = io.sockets.adapter.rooms.get(conversationId);
-        const receiverIsViewing = convRoom && [...convRoom].some(sid => {
-          const s = io.sockets.sockets.get(sid);
-          return s && s.user.id === receiverId;
-        });
-
-        let lastMessagePreview;
-        if (type === 'image')    lastMessagePreview = '📷 Photo';
-        else if (type === 'video')    lastMessagePreview = '🎬 Video';
-        else if (type === 'audio')    lastMessagePreview = '🎵 Audio';
-        else if (type === 'document') lastMessagePreview = `📄 ${fileName || 'Document'}`;
-        else if (type === 'poll')     lastMessagePreview = `📊 ${poll?.question || 'Poll'}`;
-        else                          lastMessagePreview = text;
-
-        const updateData = { lastMessage: lastMessagePreview };
-        if (!receiverIsViewing) {
-          updateData.$inc = { [`unreadCounts.${receiverId}`]: 1 };
-        }
-        const updatedConvo = await Conversation.findByIdAndUpdate(
-          conversationId,
-          updateData,
-          { new: true }
-        );
-
-        // Ack to sender so temp message is replaced with real DB record
-        io.to(senderId).emit("message_ack", { ...message.toObject(), tempId });
-
-        // Check if receiver is currently online
-        const receiverRoom = io.sockets.adapter.rooms.get(receiverId);
-        if (receiverRoom && receiverRoom.size > 0) {
-          // Auto-deliver: receiver is online
-          const now = new Date();
-          await Message.findByIdAndUpdate(message._id, {
-            status: "delivered",
-            deliveredAt: now,
-          });
-          io.to(receiverId).emit("receive_message", {
-            ...message.toObject(),
-            status: "delivered",
-            deliveredAt: now,
-          });
-          io.to(senderId).emit("message_delivered", {
-            messageId: message._id.toString(),
-          });
-        } else {
-          io.to(receiverId).emit("receive_message", message.toObject());
-        }
-
-        if (!receiverIsViewing) {
-          const newCount = updatedConvo.unreadCounts?.get?.(receiverId) || 0;
-          io.to(receiverId).emit("unread_count_update", {
+          const msgData = {
             conversationId,
-            unreadCount: newCount,
+            senderId,
+            receiverId,
+            message: text || "",
+            status: "sent",
+            type,
+          };
+          if (fileUrl)  msgData.fileUrl  = fileUrl;
+          if (fileName) msgData.fileName = fileName;
+          if (fileSize) msgData.fileSize = fileSize;
+          if (duration) msgData.duration = duration;
+          if (poll)     msgData.poll     = poll;
+          if (replyTo)  msgData.replyTo  = replyTo;
+
+          const message = await Message.create(msgData);
+
+          // Populate replyTo for rich display on both sides
+          const populated = await Message.findById(message._id).populate(REPLY_POPULATE);
+
+          const convRoom = io.sockets.adapter.rooms.get(conversationId);
+          const receiverIsViewing = convRoom && [...convRoom].some((sid) => {
+            const s = io.sockets.sockets.get(sid);
+            return s && s.user.id === receiverId;
+          });
+
+          let lastMessagePreview;
+          if (type === "image")         lastMessagePreview = "📷 Photo";
+          else if (type === "video")    lastMessagePreview = "🎬 Video";
+          else if (type === "audio")    lastMessagePreview = "🎵 Audio";
+          else if (type === "document") lastMessagePreview = `📄 ${fileName || "Document"}`;
+          else if (type === "poll")     lastMessagePreview = `📊 ${poll?.question || "Poll"}`;
+          else                          lastMessagePreview = text;
+
+          const updateData = { lastMessage: lastMessagePreview };
+          if (!receiverIsViewing) {
+            updateData.$inc = { [`unreadCounts.${receiverId}`]: 1 };
+          }
+          const updatedConvo = await Conversation.findByIdAndUpdate(
+            conversationId,
+            updateData,
+            { new: true }
+          );
+
+          const msgObj = populated.toObject();
+
+          // Ack to sender so temp message is replaced with real DB record
+          io.to(senderId).emit("message_ack", { ...msgObj, tempId });
+
+          // Deliver to receiver
+          const receiverRoom = io.sockets.adapter.rooms.get(receiverId);
+          if (receiverRoom && receiverRoom.size > 0) {
+            const now = new Date();
+            await Message.findByIdAndUpdate(message._id, {
+              status: "delivered",
+              deliveredAt: now,
+            });
+            io.to(receiverId).emit("receive_message", {
+              ...msgObj,
+              status: "delivered",
+              deliveredAt: now,
+            });
+            io.to(senderId).emit("message_delivered", {
+              messageId: message._id.toString(),
+            });
+          } else {
+            io.to(receiverId).emit("receive_message", msgObj);
+          }
+
+          if (!receiverIsViewing) {
+            const newCount = updatedConvo.unreadCounts?.get?.(receiverId) || 0;
+            io.to(receiverId).emit("unread_count_update", {
+              conversationId,
+              unreadCount: newCount,
+              lastMessage: lastMessagePreview,
+            });
+          }
+          io.to(senderId).emit("unread_count_update", {
+            conversationId,
+            unreadCount: 0,
             lastMessage: lastMessagePreview,
           });
+        } catch (err) {
+          console.error("send_message error:", err.message);
         }
-        io.to(senderId).emit("unread_count_update", {
-          conversationId,
-          unreadCount: 0,
-          lastMessage: lastMessagePreview,
-        });
-      } catch (err) {
-        console.error("send_message error:", err.message);
       }
-    });
+    );
 
     // ── TYPING ─────────────────────────────────────────────────────────────────
     socket.on("typing", ({ conversationId }) => {
@@ -204,6 +230,47 @@ export const initSocket = (server) => {
 
     socket.on("stop_typing", ({ conversationId }) => {
       socket.to(conversationId).emit("user_stop_typing", { conversationId });
+    });
+
+    // ── VOICE CALL RELAY ───────────────────────────────────────────────────────
+    // Caller → server → Receiver: initiate call (contains offer)
+    socket.on("call:initiate", ({ to, callerName, callerAvatar, offer }) => {
+      io.to(to).emit("call:incoming", {
+        from: userId,
+        callerName,
+        callerAvatar,
+        offer,
+      });
+    });
+
+    // Receiver → server → Caller: call accepted (contains answer)
+    socket.on("call:accepted", ({ to, answer }) => {
+      io.to(to).emit("call:accepted", { from: userId, answer });
+    });
+
+    // Receiver → server → Caller: call rejected
+    socket.on("call:rejected", ({ to }) => {
+      io.to(to).emit("call:rejected", { from: userId });
+    });
+
+    // Either side → server → Other: call ended
+    socket.on("call:ended", ({ to }) => {
+      io.to(to).emit("call:ended", { from: userId });
+    });
+
+    // WebRTC offer relay (caller → recipient after accept)
+    socket.on("call:offer", ({ to, offer }) => {
+      io.to(to).emit("call:offer", { from: userId, offer });
+    });
+
+    // WebRTC answer relay (recipient → caller)
+    socket.on("call:answer", ({ to, answer }) => {
+      io.to(to).emit("call:answer", { from: userId, answer });
+    });
+
+    // ICE candidate relay (bidirectional)
+    socket.on("call:ice-candidate", ({ to, candidate }) => {
+      io.to(to).emit("call:ice-candidate", { from: userId, candidate });
     });
 
     // ── DISCONNECT ─────────────────────────────────────────────────────────────

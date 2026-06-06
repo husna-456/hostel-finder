@@ -58,6 +58,11 @@ import PaymentSuccessPage from "./pages/user/PaymentSuccessPage";
 // ✅ Shared
 import ProfilePage from "./pages/ProfilePage";
 
+// ✅ Call system
+import { CallProvider } from "./context/CallContext";
+import IncomingCallOverlay from "./components/chat/IncomingCallOverlay";
+import ActiveCallScreen from "./components/chat/ActiveCallScreen";
+
 // ✅ Public Hostel Pages
 import AllHostels from "./pages/AllHostels";
 import HostelDetails from "./pages/HostelDetails";
@@ -94,7 +99,7 @@ function App() {
     location.pathname.startsWith("/admin");
 
   return (
-    <>
+    <CallProvider>
       {!hideNavbar && <Navbar />}
 
       <div className="min-h-screen bg-gray-50">
@@ -246,6 +251,9 @@ function App() {
         </Routes>
       </div>
 
+      <IncomingCallOverlay />
+      <ActiveCallScreen />
+
       <ToastContainer
         position="top-right"
         autoClose={2000}
@@ -257,7 +265,7 @@ function App() {
         draggable={false}
         pauseOnHover={false}
       />
-    </>
+    </CallProvider>
   );
 }
 
