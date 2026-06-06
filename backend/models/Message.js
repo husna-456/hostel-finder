@@ -33,6 +33,22 @@ const messageSchema = new mongoose.Schema(
     },
     deliveredAt: { type: Date, default: null },
     seenAt:      { type: Date, default: null },
+    type: {
+      type: String,
+      enum: ['text', 'image', 'video', 'audio', 'document', 'poll'],
+      default: 'text',
+    },
+    fileUrl:  { type: String, default: null },
+    fileName: { type: String, default: null },
+    fileSize: { type: Number, default: null },
+    poll: {
+      question: String,
+      options: [{
+        _id: false,
+        text: String,
+        votes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      }],
+    },
   },
   { timestamps: true }
 );

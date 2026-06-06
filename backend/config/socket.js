@@ -98,7 +98,7 @@ export const initSocket = (server) => {
     });
 
     // ── SEND MESSAGE ───────────────────────────────────────────────────────────
-    socket.on("send_message", async ({ conversationId, text, tempId }) => {
+    socket.on("send_message", async ({ conversationId, text, tempId, type = 'text', fileUrl, fileName, fileSize, poll }) => {
       try {
         if (!text?.trim()) return;
 
@@ -116,13 +116,20 @@ export const initSocket = (server) => {
           return;
         }
 
-        const message = await Message.create({
+        const msgData = {
           conversationId,
           senderId,
           receiverId,
           message: text,
           status: "sent",
-        });
+          type,
+        };
+        if (fileUrl)  msgData.fileUrl  = fileUrl;
+        if (fileName) msgData.fileName = fileName;
+        if (fileSize) msgData.fileSize = fileSize;
+        if (poll)     msgData.poll     = poll;
+
+        const message = await Message.create(msgData);
 
         const convRoom = io.sockets.adapter.rooms.get(conversationId);
         const receiverIsViewing = convRoom && [...convRoom].some(sid => {
@@ -130,7 +137,15 @@ export const initSocket = (server) => {
           return s && s.user.id === receiverId;
         });
 
-        const updateData = { lastMessage: text };
+        let lastMessagePreview;
+        if (type === 'image')    lastMessagePreview = '📷 Photo';
+        else if (type === 'video')    lastMessagePreview = '🎬 Video';
+        else if (type === 'audio')    lastMessagePreview = '🎵 Audio';
+        else if (type === 'document') lastMessagePreview = `📄 ${fileName || 'Document'}`;
+        else if (type === 'poll')     lastMessagePreview = `📊 ${poll?.question || 'Poll'}`;
+        else                          lastMessagePreview = text;
+
+        const updateData = { lastMessage: lastMessagePreview };
         if (!receiverIsViewing) {
           updateData.$inc = { [`unreadCounts.${receiverId}`]: 1 };
         }
@@ -169,13 +184,13 @@ export const initSocket = (server) => {
           io.to(receiverId).emit("unread_count_update", {
             conversationId,
             unreadCount: newCount,
-            lastMessage: text,
+            lastMessage: lastMessagePreview,
           });
         }
         io.to(senderId).emit("unread_count_update", {
           conversationId,
           unreadCount: 0,
-          lastMessage: text,
+          lastMessage: lastMessagePreview,
         });
       } catch (err) {
         console.error("send_message error:", err.message);

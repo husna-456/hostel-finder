@@ -149,6 +149,14 @@ const handleFocusOut = () => {
         setContactStatus({ isOnline, lastSeen });
     };
 
+    const onPollUpdated = ({ messageId, poll }) => {
+      setMessages(prev => prev.map(m =>
+        m._id?.toString() === messageId || m._id === messageId
+          ? { ...m, poll }
+          : m
+      ));
+    };
+
     socket.on("receive_message",   onReceive);
     socket.on("message_ack",       onAck);
     socket.on("message_delivered", onDelivered);
@@ -156,6 +164,7 @@ const handleFocusOut = () => {
     socket.on("user_typing",       onTyping);
     socket.on("user_stop_typing",  onStopType);
     socket.on("user_status_change",onStatus);
+    socket.on("poll_updated",      onPollUpdated);
 
     return () => {
       socket.off("receive_message",   onReceive);
@@ -165,6 +174,7 @@ const handleFocusOut = () => {
       socket.off("user_typing",       onTyping);
       socket.off("user_stop_typing",  onStopType);
       socket.off("user_status_change",onStatus);
+      socket.off("poll_updated",      onPollUpdated);
     };
   }, [socket, conversation._id, currentUserId, otherUser?._id]);
 
