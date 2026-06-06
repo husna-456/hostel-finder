@@ -105,6 +105,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   const [isRecording,    setIsRecording]    = useState(false);
   const [recDuration,    setRecDuration]    = useState(0);
 
+  const textareaRef      = useRef(null);
   const typingRef        = useRef(null);
   const emojiWrapRef     = useRef(null);
   const attachWrapRef    = useRef(null);
@@ -129,6 +130,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
 
   const handleChange = (e) => {
     setText(e.target.value);
+    const ta = textareaRef.current;
+    if (ta) { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 96) + "px"; }
     if (!socket || !e.target.value.trim()) return;
     socket.emit("typing", { conversationId });
     clearTimeout(typingRef.current);
@@ -159,6 +162,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
       replyTo: replyTo?._id || null,
     });
     setText("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     clearReply?.();
     setShowEmoji(false);
   };
@@ -348,8 +352,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-1 bg-gray-100 rounded-full px-3 py-2 border border-gray-200">
+      <div className="flex items-end gap-2">
+        <div className="flex-1 flex items-end gap-1 bg-gray-100 rounded-2xl px-3 py-2 border border-gray-200">
 
           {/* Attach menu */}
           <div ref={attachWrapRef} className="relative shrink-0">
@@ -419,13 +423,14 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
 
           {/* Text area */}
           <textarea
+            ref={textareaRef}
             rows={1}
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             disabled={uploading}
             className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-gray-900
-                       resize-none leading-tight max-h-24 overflow-y-auto placeholder-gray-400 disabled:opacity-60"
+                       resize-none leading-tight overflow-hidden placeholder-gray-400 disabled:opacity-60"
             placeholder={uploading ? "Uploading…" : "Write your message…"}
           />
 

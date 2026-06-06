@@ -352,7 +352,7 @@ function ReactionsDisplay({ reactions, currentUserId, onReact }) {
 
 /* ─── action menu items (used in both popup + sheet) ─────── */
 
-function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onClose }) {
+function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onMarkDeleted, onMobileDelete, onClose }) {
   const hasMedia = !!message.fileUrl && !message.isDeleted;
   const hasText  = !!message.message && !message.isDeleted;
 
@@ -372,6 +372,10 @@ function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onClose }) 
   };
 
   const handleDelete = async () => {
+    if (window.innerWidth < 768) {
+      onMobileDelete?.();
+      return;
+    }
     onClose();
     if (isSender) {
       const result = await Swal.fire({
@@ -391,6 +395,7 @@ function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onClose }) 
           await fetchClient(`/messages/${message._id}/delete`, {
             method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
           });
+          onMarkDeleted?.(message._id);
         } catch { toast.error("Failed to delete"); }
       } else if (result.isDenied) {
         try {
@@ -456,7 +461,7 @@ function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onClose }) 
 /* ─── main MessageBubble ────────────────────────────────── */
 
 export default function MessageBubble({
-  message, highlight, isCurrentResult, onReply, onSelfDelete, otherUser,
+  message, highlight, isCurrentResult, onReply, onSelfDelete, onMarkDeleted, otherUser,
   isSelected, onSelect, onClose,
 }) {
   const currentUserId = getUserId();
@@ -469,6 +474,27 @@ export default function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const bubbleRef    = useRef(null);
   const longPressRef = useRef(null);
+  const [showDeleteSheet, setShowDeleteSheet] = useState(false);
+
+  const deleteMobileForMe = async () => {
+    setShowDeleteSheet(false);
+    try {
+      await fetchClient(`/messages/${message._id}/delete`, {
+        method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
+      });
+      onSelfDelete?.(message._id);
+    } catch { toast.error("Failed to delete"); }
+  };
+
+  const deleteMobileForEveryone = async () => {
+    setShowDeleteSheet(false);
+    try {
+      await fetchClient(`/messages/${message._id}/delete`, {
+        method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
+      });
+      onMarkDeleted?.(message._id);
+    } catch { toast.error("Failed to delete"); }
+  };
 
   // When parent deselects this message, reset local open state
   useEffect(() => {
@@ -556,7 +582,10 @@ export default function MessageBubble({
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <ActionMenuItems
               message={message} isSender={isSender}
-              onReply={onReply} onSelfDelete={onSelfDelete} onClose={handleClose}
+              onReply={onReply} onSelfDelete={onSelfDelete}
+              onMarkDeleted={onMarkDeleted}
+              onMobileDelete={() => { setShowDeleteSheet(true); handleClose(); }}
+              onClose={handleClose}
             />
           </div>
         </div>,
@@ -578,7 +607,10 @@ export default function MessageBubble({
             <div className="border-t border-gray-100" />
             <ActionMenuItems
               message={message} isSender={isSender}
-              onReply={onReply} onSelfDelete={onSelfDelete} onClose={handleClose}
+              onReply={onReply} onSelfDelete={onSelfDelete}
+              onMarkDeleted={onMarkDeleted}
+              onMobileDelete={() => { setShowDeleteSheet(true); handleClose(); }}
+              onClose={handleClose}
             />
           </div>
         </div>,
@@ -599,6 +631,47 @@ export default function MessageBubble({
             />
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* ── Mobile delete confirmation sheet ── */}
+      {showDeleteSheet && createPortal(
+        <>
+          <div
+            className="fixed inset-x-0 bottom-0 z-[10001] bg-white rounded-t-2xl shadow-2xl p-4 pb-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+            <p className="text-center font-semibold text-gray-800 mb-1">Delete message?</p>
+            <p className="text-center text-sm text-gray-500 mb-5">Choose an option</p>
+            <div className="space-y-2">
+              {isSender && (
+                <button
+                  onClick={deleteMobileForEveryone}
+                  className="w-full py-3 rounded-xl bg-red-500 text-white font-medium text-sm"
+                >
+                  Delete for everyone
+                </button>
+              )}
+              <button
+                onClick={deleteMobileForMe}
+                className="w-full py-3 rounded-xl bg-gray-100 text-gray-800 font-medium text-sm"
+              >
+                Delete for me
+              </button>
+              <button
+                onClick={() => setShowDeleteSheet(false)}
+                className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div
+            className="fixed inset-0 bg-black/40 z-[10000]"
+            onClick={() => setShowDeleteSheet(false)}
+          />
+        </>,
         document.body
       )}
 

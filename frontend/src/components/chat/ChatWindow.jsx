@@ -173,7 +173,7 @@ export default function ChatWindow({ conversation, onBack }) {
       setMessages((prev) =>
         prev.map((m) =>
           m._id?.toString() === messageId || m._id === messageId
-            ? { ...m, isDeleted: true, message: "", fileUrl: "" }
+            ? { ...m, isDeleted: true, message: "", fileUrl: "", reactions: [] }
             : m
         )
       );
@@ -256,6 +256,16 @@ export default function ChatWindow({ conversation, onBack }) {
 
   const handleSelfDelete = (messageId) => {
     setMessages((prev) => prev.filter((m) => m._id !== messageId));
+  };
+
+  const handleMarkDeleted = (messageId) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === messageId
+          ? { ...m, isDeleted: true, message: "", fileUrl: "", reactions: [] }
+          : m
+      )
+    );
   };
 
   const handleClearChat = () => {
@@ -445,6 +455,7 @@ export default function ChatWindow({ conversation, onBack }) {
                 isCurrentResult={chatSearch.trim() !== "" && searchResults[searchIdx]?._id === msg._id}
                 onReply={setReplyTo}
                 onSelfDelete={handleSelfDelete}
+                onMarkDeleted={handleMarkDeleted}
                 otherUser={otherUser}
                 isSelected={selectedMessageId === msg._id}
                 onSelect={() => setSelectedMessageId(msg._id)}
