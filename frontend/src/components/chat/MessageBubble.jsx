@@ -397,6 +397,7 @@ export default function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSheet,       setShowSheet]       = useState(false);
+  const [menuAbove,       setMenuAbove]       = useState(false);
 
   const bubbleRef    = useRef(null);
   const menuRef      = useRef(null);
@@ -435,6 +436,10 @@ export default function MessageBubble({
   const toggleMenu = (e) => {
     e.stopPropagation();
     setShowReactions(false);
+    if (!showMenu && bubbleRef.current) {
+      const rect = bubbleRef.current.getBoundingClientRect();
+      setMenuAbove(window.innerHeight - rect.bottom < 250);
+    }
     setShowMenu((p) => !p);
     onSelect?.();
   };
@@ -510,20 +515,20 @@ export default function MessageBubble({
       isSender ? "right-0" : "left-0"
     )}>
       <div className="bg-white rounded-full shadow-xl border border-gray-100 px-2.5 py-1.5 flex items-center gap-0.5">
-        {QUICK_EMOJIS.map((e) => (
+        {QUICK_EMOJIS.map((emoji) => (
           <button
-            key={e}
-            onClick={() => { handleReact(e); setShowReactions(false); onClose?.(); }}
+            key={emoji}
+            onClick={(e) => { e.stopPropagation(); handleReact(emoji); setShowReactions(false); onClose?.(); }}
             className={clsx(
               "text-xl leading-none px-1 py-0.5 rounded-full hover:scale-125 transition-transform",
-              currentUserReaction === e && "bg-purple-100"
+              currentUserReaction === emoji && "bg-purple-100"
             )}
           >
-            {e}
+            {emoji}
           </button>
         ))}
         <button
-          onClick={() => { setShowEmojiPicker(true); setShowReactions(false); }}
+          onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(true); setShowReactions(false); onSelect?.(); }}
           className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ml-0.5 shrink-0 transition-colors"
           title="More reactions"
         >
@@ -557,7 +562,8 @@ export default function MessageBubble({
       ref={menuRef}
       onClick={(e) => e.stopPropagation()}
       className={clsx(
-        "absolute top-7 z-50 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1",
+        "absolute z-50 w-44 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden py-1 menu-popup",
+        menuAbove ? "bottom-full mb-1" : "top-7 mt-0.5",
         isSender ? "right-0" : "left-0"
       )}
     >
