@@ -279,8 +279,8 @@ export default function OwnerBookings() {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-3">
-                  <div className="flex items-center gap-1"><Phone size={11} />{b.contactNo}</div>
-                  <div className="flex items-center gap-1"><Mail size={11} />{b.email}</div>
+                  <div className="flex items-center gap-1 min-w-0 overflow-hidden"><Phone size={11} className="shrink-0" /><span className="truncate">{b.contactNo}</span></div>
+                  <div className="flex items-center gap-1 min-w-0 overflow-hidden"><Mail size={11} className="shrink-0" /><span className="truncate">{b.email}</span></div>
                   <div>People: <strong className="text-gray-700">{b.people}</strong></div>
                   <div>Advance: <strong className="text-purple-700">{b.advanceAmount ? `PKR ${b.advanceAmount.toLocaleString()}` : "—"}</strong></div>
                 </div>

@@ -129,7 +129,7 @@ export default function SearchBox() {
 
       {/* RADIUS */}
       <div className="flex items-center gap-2 flex-[1.3] w-full h-12">
-        <span className="text-base font-medium text-white/80 md:text-gray-700 whitespace-nowrap">
+        <span className="max-md:hidden text-base font-medium text-white/80 md:text-gray-700 whitespace-nowrap">
           Set Radius
         </span>
 

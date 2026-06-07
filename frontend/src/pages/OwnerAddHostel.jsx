@@ -61,20 +61,20 @@ const OwnerAddHostel = () => {
     <div className="min-h-screen bg-gray-50 pt-16 pb-16">
 
       {/* Heading */}
-      <div className="bg-purple-50 py-10">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+      <div className="bg-purple-50 py-6 md:py-10">
+        <div className="max-w-6xl mx-auto text-center px-4">
+          <h2 className="text-2xl md:text-5xl font-bold text-gray-900">
             Start Listing Your Property
           </h2>
-          <p className="text-xl text-gray-700 mt-3">
+          <p className="text-base md:text-xl text-gray-700 mt-3">
             Complete these 3 simple steps to add your hostel
           </p>
         </div>
       </div>
 
       {/* Progress Steps */}
-      <div className="max-w-5xl mx-auto px-6 mt-10">
-        <div className="flex items-center justify-center space-x-20">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 mt-6 md:mt-10">
+        <div className="flex items-center justify-center gap-4 sm:gap-12 md:gap-20">
           {[ 
             { num: 1, label: "GENERAL DETAILS", key: "generalDetails" },
             { num: 2, label: "HOSTEL SPECIFICATIONS", key: "specifications" },
@@ -91,8 +91,8 @@ const OwnerAddHostel = () => {
             >
               <div
                 className={`
-                  w-14 h-14 rounded-full flex items-center justify-center 
-                  font-bold text-xl transition-all duration-300 shadow-sm
+                  w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center
+                  font-bold text-base md:text-xl transition-all duration-300 shadow-sm
                   group-hover:scale-110 group-hover:shadow-md
                   ${
                     activeStep === step.num
@@ -108,7 +108,7 @@ const OwnerAddHostel = () => {
 
               <span
                 className={`
-                  mt-3 text-center font-semibold transition-all duration-300
+                  mt-2 md:mt-3 text-center font-semibold transition-all duration-300 max-md:hidden
                   ${activeStep === step.num ? "text-purple-700" : "text-gray-800"}
                   group-hover:text-purple-600
                 `}
@@ -121,7 +121,7 @@ const OwnerAddHostel = () => {
       </div>
 
       {/* Form Section */}
-      <div className="mt-10 max-w-4xl mx-auto px-6">
+      <div className="mt-6 md:mt-10 max-w-4xl mx-auto px-4 md:px-6">
         {activeStep === 1 && (
           <GeneralDetails
            isFinalSubmitted={isFinalSubmitted} 
