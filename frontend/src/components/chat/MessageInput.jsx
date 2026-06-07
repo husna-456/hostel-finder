@@ -162,10 +162,12 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
       replyTo: replyTo?._id || null,
     });
     setText("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
+    }
     clearReply?.();
     setShowEmoji(false);
-    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const handleKeyDown = (e) => {

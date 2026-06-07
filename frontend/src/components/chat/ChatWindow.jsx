@@ -60,8 +60,10 @@ export default function ChatWindow({ conversation, onBack }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchIdx,     setSearchIdx]     = useState(0);
 
-  const messagesEndRef = useRef(null);
-  const menuRef        = useRef(null);
+  const messagesEndRef  = useRef(null);
+  const scrollAreaRef   = useRef(null);
+  const prevMsgCountRef = useRef(0);
+  const menuRef         = useRef(null);
 
   /* ── prevent body scroll while chat is open (mobile stability) ── */
   useEffect(() => {
@@ -82,9 +84,13 @@ export default function ChatWindow({ conversation, onBack }) {
     });
   }, [conversation?._id]);
 
-  /* ── auto-scroll ── */
+  /* ── auto-scroll: only on new messages, direct scrollTop to avoid viewport jump ── */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isNew = messages.length > prevMsgCountRef.current;
+    prevMsgCountRef.current = messages.length;
+    if (!isNew) return;
+    const el = scrollAreaRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   /* ── join room ── */
@@ -228,10 +234,6 @@ export default function ChatWindow({ conversation, onBack }) {
   /* ── handlers ── */
   const handleSend = (msg) => {
     setMessages((prev) => [...prev, msg]);
-    requestAnimationFrame(() => {
-      const textarea = document.querySelector("textarea");
-      if (textarea) textarea.focus();
-    });
   };
 
   const handleSelfDelete = (messageId) => {
@@ -426,7 +428,7 @@ export default function ChatWindow({ conversation, onBack }) {
       )}
 
       {/* ══ MESSAGES ══ */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
         {visibleMessages.length > 0 ? (
           visibleMessages.map((msg) => (
             <div id={`msg-${msg._id}`} key={msg._id || Math.random()}>
@@ -458,7 +460,6 @@ export default function ChatWindow({ conversation, onBack }) {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
       {/* ══ INPUT ══ */}
