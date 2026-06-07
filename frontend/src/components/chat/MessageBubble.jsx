@@ -698,9 +698,9 @@ export default function MessageBubble({
             onTouchMove={onTouchEnd}
             onContextMenu={(e) => e.preventDefault()}
             className={clsx(
-              "max-w-[75%] md:max-w-[65%] rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
-              (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-2",
-              isSender ? "bg-[#DCF8C6] rounded-br-sm" : "bg-white rounded-bl-sm",
+              "max-w-[75%] w-fit rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
+              (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-1.5",
+              isSender ? "bg-[#d9fdd3] rounded-tr-sm" : "bg-white rounded-tl-sm",
               highlight && !isCurrentResult && "ring-2 ring-yellow-300",
               isCurrentResult && "ring-2 ring-yellow-500",
               isSelected && "ring-2 ring-purple-300",

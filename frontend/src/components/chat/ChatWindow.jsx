@@ -228,6 +228,10 @@ export default function ChatWindow({ conversation, onBack }) {
   /* ── handlers ── */
   const handleSend = (msg) => {
     setMessages((prev) => [...prev, msg]);
+    requestAnimationFrame(() => {
+      const textarea = document.querySelector("textarea");
+      if (textarea) textarea.focus();
+    });
   };
 
   const handleSelfDelete = (messageId) => {
