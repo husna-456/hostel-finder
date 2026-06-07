@@ -298,7 +298,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   /* ── recording UI ── */
   if (isRecording) {
     return (
-      <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0"
+      <div className="w-full px-4 py-3 shrink-0"
            style={{ paddingBottom: "max(env(safe-area-inset-bottom, 8px), 8px)" }}>
         <div className="flex items-center gap-3 bg-red-50 rounded-full px-4 py-2 border border-red-200">
           <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse shrink-0" />
@@ -325,7 +325,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   }
 
   return (
-    <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0"
+    <div className="w-full px-4 py-3 shrink-0"
          style={{ paddingBottom: "max(env(safe-area-inset-bottom, 8px), 8px)" }}>
       {/* Hidden file inputs */}
       <input ref={docInputRef}   type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx" onChange={handleDocChange} />
