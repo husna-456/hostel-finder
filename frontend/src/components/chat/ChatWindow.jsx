@@ -428,7 +428,11 @@ export default function ChatWindow({ conversation, onBack }) {
       )}
 
       {/* ══ MESSAGES ══ */}
-      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2">
+      <div
+        ref={scrollAreaRef}
+        className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-2"
+        onScroll={() => setSelectedMessageId(null)}
+      >
         {visibleMessages.length > 0 ? (
           visibleMessages.map((msg) => (
             <div id={`msg-${msg._id}`} key={msg._id || Math.random()}>

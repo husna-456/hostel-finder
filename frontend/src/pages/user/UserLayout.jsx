@@ -1,38 +1,34 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import UserSidebar from "./UserSidebar";
+import { FaBars } from "react-icons/fa";
 
 export default function UserLayout() {
   const location = useLocation();
   const isChatPage = location.pathname.endsWith("/chat");
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) setSidebarOpen(true);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <UserSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      {!sidebarOpen && !isChatPage && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="md:hidden fixed top-4 left-4 z-30 bg-white p-2 rounded-xl shadow-md text-gray-700 hover:text-purple-600 transition-colors"
-        >
-          ☰
-        </button>
-      )}
-
+      {/* Content — on mobile no margin (sidebar is overlay); on desktop shift right */}
       <div
-        className={`flex-1 min-h-0 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "ml-0 md:ml-60" : "ml-0 md:ml-16"
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
+          sidebarOpen ? "md:ml-60" : "md:ml-16"
         }`}
       >
+        {/* Mobile top bar with hamburger — hidden on chat page */}
+        <div className={`md:hidden flex items-center gap-3 bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-30 ${isChatPage ? "hidden" : ""}`}>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+          >
+            <FaBars className="text-xl" />
+          </button>
+          <span className="text-base font-bold text-purple-600">User Panel</span>
+        </div>
+
         <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto ${isChatPage ? "" : "p-4 md:p-6"}`}>
           <Outlet />
         </main>

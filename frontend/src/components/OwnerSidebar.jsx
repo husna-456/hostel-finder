@@ -55,7 +55,7 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
         <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsOpen(false)} />
       )}
 
-      <aside className={`flex flex-col justify-between bg-white border-r border-gray-200 shadow-sm transition-all duration-300 fixed top-0 left-0 h-screen z-50 overflow-y-auto ${
+      <aside className={`flex flex-col justify-between bg-white border-r border-gray-200 shadow-sm transition-all duration-300 fixed top-0 left-0 h-screen z-50 overflow-x-hidden overflow-y-auto ${
         isOpen ? "w-60" : "w-0 md:w-16"
       }`}>
         <div>
@@ -90,7 +90,7 @@ export default function OwnerSidebar({ isOpen, setIsOpen }) {
         <div className="border-t border-gray-200 p-3">
           <button
             onClick={openDropdown}
-            className="flex items-center gap-3 w-full hover:bg-gray-100 rounded-xl p-2.5 transition"
+            className={`flex items-center w-full hover:bg-gray-100 rounded-xl p-2.5 transition ${isOpen ? "gap-3" : "justify-center"}`}
           >
             {avatar ? (
               <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0 border-2 border-purple-100" />

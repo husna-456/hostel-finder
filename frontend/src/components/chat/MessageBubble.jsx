@@ -5,11 +5,10 @@ import { getUserId } from "../../utils/auth";
 import clsx from "clsx";
 import {
   Check, CheckCheck, FileText, Download, Play, Pause,
-  Copy, Reply, Trash2, X, ChevronDown, Plus,
+  Copy, Reply, Trash2, X, Smile, ChevronDown, Plus,
 } from "lucide-react";
 import { fetchClient } from "../../api/fetchClient";
 import { toast } from "react-toastify";
-import Swal from "sweetalert2";
 
 /* ─── helpers ────────────────────────────────────────────── */
 
@@ -39,32 +38,6 @@ function getDocStyle(name) {
   if (["ppt","pptx"].includes(ext)) return { bg: "bg-orange-100", color: "text-orange-600", label: ext.toUpperCase() };
   return { bg: "bg-gray-100", color: "text-gray-600", label: ext.toUpperCase() || "FILE" };
 }
-
-/* ─── popup position calculator ─────────────────────────── */
-
-function calcPopupPos(rect, isSender) {
-  const PW = 224;  // w-56
-  const PH = 340;  // approx (emoji bar ~52px + gap + menu ~280px)
-
-  let left;
-  if (isSender) {
-    // Open to the LEFT of the bubble
-    left = rect.left - PW - 8;
-    if (left < 8) left = 8;
-  } else {
-    // Open to the RIGHT of the bubble
-    left = rect.right + 8;
-    if (left + PW > window.innerWidth - 8) left = window.innerWidth - PW - 8;
-  }
-
-  let top = rect.top;
-  if (top + PH > window.innerHeight - 8) top = window.innerHeight - PH - 8;
-  top = Math.max(8, top);
-
-  return { top, left };
-}
-
-/* ─── quick emoji constants ──────────────────────────────── */
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -316,7 +289,7 @@ function MessageContent({ message, isSender, otherUser }) {
   );
 }
 
-/* ─── reactions display (always shown below bubble) ──────── */
+/* ─── reactions display ──────────────────────────────────── */
 
 function ReactionsDisplay({ reactions, currentUserId, onReact }) {
   if (!reactions?.length) return null;
@@ -350,111 +323,61 @@ function ReactionsDisplay({ reactions, currentUserId, onReact }) {
   );
 }
 
-/* ─── action menu items (used in both popup + sheet) ─────── */
+/* ─── delete modal (portal, mobile-sheet style on small screens) ── */
 
-function ActionMenuItems({ message, isSender, onReply, onSelfDelete, onMarkDeleted, onMobileDelete, onClose }) {
-  const hasMedia = !!message.fileUrl && !message.isDeleted;
-  const hasText  = !!message.message && !message.isDeleted;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.message || "").then(() => toast.success("Copied"));
-    onClose();
-  };
-
-  const handleReply = () => { onReply(message); onClose(); };
-
-  const handleDownload = () => {
-    const a = document.createElement("a");
-    a.href = message.fileUrl;
-    a.download = message.fileName || "download";
-    a.click();
-    onClose();
-  };
-
-  const handleDelete = async () => {
-    if (window.innerWidth < 768) {
-      onMobileDelete?.();
-      return;
-    }
-    onClose();
-    if (isSender) {
-      const result = await Swal.fire({
-        title: "Delete message?",
-        icon: "warning",
-        showDenyButton: true,
-        showCancelButton: true,
-        confirmButtonText: "Delete for everyone",
-        denyButtonText: "Delete for me",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#dc2626",
-        denyButtonColor: "#7c3aed",
-        cancelButtonColor: "#6b7280",
-      });
-      if (result.isConfirmed) {
-        try {
-          await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
-          });
-          onMarkDeleted?.(message._id);
-        } catch { toast.error("Failed to delete"); }
-      } else if (result.isDenied) {
-        try {
-          await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
-          });
-          onSelfDelete?.(message._id);
-        } catch { toast.error("Failed to delete"); }
-      }
-    } else {
-      const result = await Swal.fire({
-        title: "Delete for me?",
-        text: "This message will only be removed from your view.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Delete for me",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#7c3aed",
-        cancelButtonColor: "#6b7280",
-      });
-      if (result.isConfirmed) {
-        try {
-          await fetchClient(`/messages/${message._id}/delete`, {
-            method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
-          });
-          onSelfDelete?.(message._id);
-        } catch { toast.error("Failed to delete"); }
-      }
-    }
-  };
-
-  const items = [
-    { icon: Reply,    label: "Reply",                                onClick: handleReply,    show: true },
-    { icon: Copy,     label: "Copy text",                            onClick: handleCopy,     show: hasText },
-    { icon: Download, label: "Download",                             onClick: handleDownload, show: hasMedia },
-    { icon: Trash2,   label: isSender ? "Delete" : "Delete for me", onClick: handleDelete,   show: true, danger: true },
-    { icon: X,        label: "Cancel",                               onClick: onClose,        show: true, cancel: true },
-  ].filter((i) => i.show);
-
-  return (
-    <>
-      {items.map((item) => (
-        <div key={item.label}>
-          {item.cancel && <div className="border-t border-gray-100 my-1" />}
-          <button
-            onClick={item.onClick}
-            className={clsx(
-              "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
-              item.danger  ? "text-red-600 hover:bg-red-50" :
-              item.cancel  ? "text-gray-400 hover:bg-gray-50" :
-                             "text-gray-700 hover:bg-gray-50"
-            )}
-          >
-            <item.icon size={15} className="shrink-0" />
-            {item.label}
-          </button>
+function DeleteModal({ isSender, onDeleteEveryone, onDeleteForMe, onClose }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-xs rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* drag handle on mobile */}
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1 sm:hidden" />
+        <div className="px-6 pt-4 pb-3 text-center">
+          <h3 className="font-semibold text-gray-900 text-[15px]">Delete message?</h3>
+          {!isSender && (
+            <p className="text-xs text-gray-400 mt-1">This will only be removed from your view.</p>
+          )}
         </div>
-      ))}
-    </>
+        <div className="border-t border-gray-100" />
+
+        {/* Delete for Everyone — sender only */}
+        {isSender && (
+          <button
+            onClick={onDeleteEveryone}
+            className="w-full px-6 py-4 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Delete for Everyone
+          </button>
+        )}
+
+        {/* Delete for Me */}
+        <button
+          onClick={onDeleteForMe}
+          className={clsx(
+            "w-full px-6 py-4 text-sm font-medium transition-colors",
+            isSender
+              ? "text-gray-700 hover:bg-gray-50 border-t border-gray-100"
+              : "text-red-600 hover:bg-red-50"
+          )}
+        >
+          Delete for Me
+        </button>
+
+        {/* Cancel */}
+        <button
+          onClick={onClose}
+          className="w-full px-6 py-4 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors border-t border-gray-100"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -469,65 +392,65 @@ export default function MessageBubble({
     message.senderId?.toString() === currentUserId ||
     message.senderId === currentUserId;
 
-  const [openStyle,      setOpenStyle]      = useState(null); // "popup" | "sheet"
-  const [popupPos,       setPopupPos]       = useState(null);
+  const [showMenu,        setShowMenu]        = useState(false);
+  const [showReactions,   setShowReactions]   = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSheet,       setShowSheet]       = useState(false);
+
   const bubbleRef    = useRef(null);
+  const menuRef      = useRef(null);
+  const reactRef     = useRef(null);
   const longPressRef = useRef(null);
-  const [showDeleteSheet, setShowDeleteSheet] = useState(false);
 
-  const deleteMobileForMe = async () => {
-    setShowDeleteSheet(false);
-    try {
-      await fetchClient(`/messages/${message._id}/delete`, {
-        method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
-      });
-      onSelfDelete?.(message._id);
-    } catch { toast.error("Failed to delete"); }
-  };
-
-  const deleteMobileForEveryone = async () => {
-    setShowDeleteSheet(false);
-    try {
-      await fetchClient(`/messages/${message._id}/delete`, {
-        method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
-      });
-      onMarkDeleted?.(message._id);
-    } catch { toast.error("Failed to delete"); }
-  };
-
-  // When parent deselects this message, reset local open state
+  /* close when parent deselects (scroll, outside click, conv change) */
   useEffect(() => {
     if (!isSelected) {
-      setOpenStyle(null);
-      setPopupPos(null);
+      setShowMenu(false);
+      setShowReactions(false);
       setShowEmojiPicker(false);
+      setShowSheet(false);
     }
   }, [isSelected]);
 
-  // Desktop: ChevronDown click
-  const triggerPopup = (e) => {
-    e.stopPropagation();
-    if (!bubbleRef.current) return;
-    const rect = bubbleRef.current.getBoundingClientRect();
-    setOpenStyle("popup");
-    setPopupPos(calcPopupPos(rect, isSender));
-    onSelect?.();
-  };
-
-  // Mobile: long press
-  const onTouchStart = () => {
-    longPressRef.current = setTimeout(() => {
-      setOpenStyle("sheet");
-      onSelect?.();
-    }, 500);
-  };
-  const onTouchEnd = () => clearTimeout(longPressRef.current);
+  /* outside-click closes menu and reaction picker */
+  useEffect(() => {
+    if (!showMenu && !showReactions) return;
+    const h = (e) => {
+      if (showMenu      && menuRef.current  && !menuRef.current.contains(e.target))  setShowMenu(false);
+      if (showReactions && reactRef.current && !reactRef.current.contains(e.target)) setShowReactions(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showMenu, showReactions]);
 
   const handleClose = () => {
+    setShowMenu(false);
+    setShowReactions(false);
+    setShowSheet(false);
     setShowEmojiPicker(false);
     onClose?.();
   };
+
+  const toggleMenu = (e) => {
+    e.stopPropagation();
+    setShowReactions(false);
+    setShowMenu((p) => !p);
+    onSelect?.();
+  };
+
+  const toggleReactions = (e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setShowReactions((p) => !p);
+    onSelect?.();
+  };
+
+  /* long press on mobile → bottom sheet */
+  const onTouchStart = () => {
+    longPressRef.current = setTimeout(() => { setShowSheet(true); onSelect?.(); }, 500);
+  };
+  const onTouchEnd = () => clearTimeout(longPressRef.current);
 
   const handleReact = async (emoji) => {
     try {
@@ -537,87 +460,145 @@ export default function MessageBubble({
     } catch { toast.error("Failed to react"); }
   };
 
+  const handleReply    = () => { onReply(message); handleClose(); };
+  const handleCopy     = () => {
+    navigator.clipboard.writeText(message.message || "").then(() => toast.success("Copied"));
+    handleClose();
+  };
+  const handleDownload = () => {
+    const a = document.createElement("a");
+    a.href = message.fileUrl;
+    a.download = message.fileName || "download";
+    a.click();
+    handleClose();
+  };
+  const openDeleteModal = () => { handleClose(); setShowDeleteModal(true); };
+
+  const confirmDeleteEveryone = async () => {
+    setShowDeleteModal(false);
+    try {
+      await fetchClient(`/messages/${message._id}/delete`, {
+        method: "PATCH", body: JSON.stringify({ deleteType: "foreveryone" }),
+      });
+      onMarkDeleted?.(message._id);
+    } catch { toast.error("Failed to delete"); }
+  };
+
+  const confirmDeleteForMe = async () => {
+    setShowDeleteModal(false);
+    try {
+      await fetchClient(`/messages/${message._id}/delete`, {
+        method: "PATCH", body: JSON.stringify({ deleteType: "forme" }),
+      });
+      onSelfDelete?.(message._id);
+    } catch { toast.error("Failed to delete"); }
+  };
+
+  const type           = message.type || "text";
+  const hideBottomMeta = !message.isDeleted && (type === "image" || type === "video");
+  const hasText        = !!message.message && !message.isDeleted;
+  const hasMedia       = !!message.fileUrl  && !message.isDeleted;
+
   const currentUserReaction = message.reactions?.find(
     (r) => r.userId?.toString() === currentUserId || r.userId === currentUserId
   )?.emoji;
 
-  const type = message.type || "text";
-  const hideBottomMeta = !message.isDeleted && (type === "image" || type === "video");
-
-  /* ── emoji bar (shared between popup + sheet) ── */
-  const emojiBar = (
-    <div className="bg-white shadow-lg rounded-full px-3 py-2 flex items-center gap-0.5">
-      {QUICK_EMOJIS.map((e) => (
+  /* ── quick reaction picker (inline absolute) ── */
+  const reactionPicker = (
+    <div className={clsx(
+      "absolute bottom-full mb-2 z-50",
+      isSender ? "right-0" : "left-0"
+    )}>
+      <div className="bg-white rounded-full shadow-xl border border-gray-100 px-2.5 py-1.5 flex items-center gap-0.5">
+        {QUICK_EMOJIS.map((e) => (
+          <button
+            key={e}
+            onClick={() => { handleReact(e); setShowReactions(false); onClose?.(); }}
+            className={clsx(
+              "text-xl leading-none px-1 py-0.5 rounded-full hover:scale-125 transition-transform",
+              currentUserReaction === e && "bg-purple-100"
+            )}
+          >
+            {e}
+          </button>
+        ))}
         <button
-          key={e}
-          onClick={() => { handleReact(e); handleClose(); }}
-          className={clsx(
-            "text-xl leading-none px-1 py-0.5 rounded-full hover:scale-125 transition-transform cursor-pointer",
-            currentUserReaction === e && "bg-purple-100"
-          )}
+          onClick={() => { setShowEmojiPicker(true); setShowReactions(false); }}
+          className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ml-0.5 shrink-0 transition-colors"
+          title="More reactions"
         >
-          {e}
+          <Plus size={13} className="text-gray-500" />
         </button>
-      ))}
+      </div>
+    </div>
+  );
+
+  /* ── reaction toggle button ── */
+  const reactionBtn = (
+    <div ref={reactRef} className="relative shrink-0 self-end mb-1">
       <button
-        onClick={() => setShowEmojiPicker(true)}
-        className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ml-0.5 transition-colors shrink-0"
-        title="More reactions"
+        onClick={toggleReactions}
+        aria-label="React"
+        className={clsx(
+          "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+          "text-gray-400 hover:text-gray-600 hover:bg-white/70",
+          showReactions ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        )}
       >
-        <Plus size={13} className="text-gray-500" />
+        <Smile size={16} />
+      </button>
+      {showReactions && reactionPicker}
+    </div>
+  );
+
+  /* ── inline action menu (absolute, scrolls with message) ── */
+  const actionMenu = showMenu && (
+    <div
+      ref={menuRef}
+      onClick={(e) => e.stopPropagation()}
+      className={clsx(
+        "absolute top-7 z-50 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1",
+        isSender ? "right-0" : "left-0"
+      )}
+    >
+      <button onClick={handleReply}
+        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        <Reply size={14} className="text-gray-400 shrink-0" /> Reply
+      </button>
+      {hasText && (
+        <button onClick={handleCopy}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+          <Copy size={14} className="text-gray-400 shrink-0" /> Copy Message
+        </button>
+      )}
+      {hasMedia && (
+        <button onClick={handleDownload}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+          <Download size={14} className="text-gray-400 shrink-0" /> Download
+        </button>
+      )}
+      <div className="border-t border-gray-100 my-1" />
+      <button onClick={openDeleteModal}
+        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+        <Trash2 size={14} className="shrink-0" />
+        {isSender ? "Delete" : "Delete for Me"}
       </button>
     </div>
   );
 
   return (
     <>
-      {/* ── Desktop positioned popup (emoji bar + action menu) ── */}
-      {isSelected && openStyle === "popup" && popupPos && createPortal(
-        <div
-          className="fixed z-[9990] flex flex-col gap-1.5"
-          style={{ top: popupPos.top, left: popupPos.left, width: "224px" }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {emojiBar}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <ActionMenuItems
-              message={message} isSender={isSender}
-              onReply={onReply} onSelfDelete={onSelfDelete}
-              onMarkDeleted={onMarkDeleted}
-              onMobileDelete={() => { setShowDeleteSheet(true); handleClose(); }}
-              onClose={handleClose}
-            />
-          </div>
-        </div>,
-        document.body
+      {/* Delete modal */}
+      {showDeleteModal && (
+        <DeleteModal
+          isSender={isSender}
+          onDeleteEveryone={confirmDeleteEveryone}
+          onDeleteForMe={confirmDeleteForMe}
+          onClose={() => setShowDeleteModal(false)}
+        />
       )}
 
-      {/* ── Mobile bottom sheet ── */}
-      {isSelected && openStyle === "sheet" && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-end bg-black/40"
-          onClick={handleClose}
-        >
-          <div
-            className="bg-white w-full rounded-t-2xl shadow-2xl pb-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto my-3" />
-            <div className="flex justify-center px-4 pb-3">{emojiBar}</div>
-            <div className="border-t border-gray-100" />
-            <ActionMenuItems
-              message={message} isSender={isSender}
-              onReply={onReply} onSelfDelete={onSelfDelete}
-              onMarkDeleted={onMarkDeleted}
-              onMobileDelete={() => { setShowDeleteSheet(true); handleClose(); }}
-              onClose={handleClose}
-            />
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ── Full emoji picker ── */}
+      {/* Full emoji picker */}
       {showEmojiPicker && createPortal(
         <div
           className="fixed inset-0 z-[9998] flex items-end justify-center sm:items-center bg-black/40"
@@ -626,116 +607,140 @@ export default function MessageBubble({
           <div onClick={(e) => e.stopPropagation()}>
             <EmojiPicker
               onEmojiClick={(e) => { handleReact(e.emoji); setShowEmojiPicker(false); handleClose(); }}
-              height={380}
-              width={300}
+              height={380} width={300}
             />
           </div>
         </div>,
         document.body
       )}
 
-      {/* ── Mobile delete confirmation sheet ── */}
-      {showDeleteSheet && createPortal(
-        <>
+      {/* Mobile bottom sheet */}
+      {isSelected && showSheet && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-end bg-black/40" onClick={handleClose}>
           <div
-            className="fixed inset-x-0 bottom-0 z-[10001] bg-white rounded-t-2xl shadow-2xl p-4 pb-8"
+            className="bg-white w-full rounded-t-2xl shadow-2xl pb-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
-            <p className="text-center font-semibold text-gray-800 mb-1">Delete message?</p>
-            <p className="text-center text-sm text-gray-500 mb-5">Choose an option</p>
-            <div className="space-y-2">
-              {isSender && (
-                <button
-                  onClick={deleteMobileForEveryone}
-                  className="w-full py-3 rounded-xl bg-red-500 text-white font-medium text-sm"
-                >
-                  Delete for everyone
-                </button>
-              )}
-              <button
-                onClick={deleteMobileForMe}
-                className="w-full py-3 rounded-xl bg-gray-100 text-gray-800 font-medium text-sm"
-              >
-                Delete for me
-              </button>
-              <button
-                onClick={() => setShowDeleteSheet(false)}
-                className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium text-sm"
-              >
-                Cancel
-              </button>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-2" />
+
+            {/* Quick emoji bar */}
+            <div className="flex justify-center px-4 pb-3">
+              <div className="bg-white rounded-full shadow-lg border border-gray-100 px-2.5 py-1.5 flex items-center gap-0.5">
+                {QUICK_EMOJIS.map((e) => (
+                  <button key={e}
+                    onClick={() => { handleReact(e); handleClose(); }}
+                    className={clsx(
+                      "text-xl leading-none px-1 py-0.5 rounded-full hover:scale-125 transition-transform",
+                      currentUserReaction === e && "bg-purple-100"
+                    )}
+                  >{e}</button>
+                ))}
+              </div>
             </div>
+
+            <div className="border-t border-gray-100" />
+
+            <button onClick={handleReply}
+              className="flex items-center gap-3 w-full px-6 py-3.5 text-sm text-gray-700 hover:bg-gray-50">
+              <Reply size={16} className="text-gray-400 shrink-0" /> Reply
+            </button>
+            {hasText && (
+              <button onClick={handleCopy}
+                className="flex items-center gap-3 w-full px-6 py-3.5 text-sm text-gray-700 hover:bg-gray-50">
+                <Copy size={16} className="text-gray-400 shrink-0" /> Copy Message
+              </button>
+            )}
+            {hasMedia && (
+              <button onClick={handleDownload}
+                className="flex items-center gap-3 w-full px-6 py-3.5 text-sm text-gray-700 hover:bg-gray-50">
+                <Download size={16} className="text-gray-400 shrink-0" /> Download
+              </button>
+            )}
+            <div className="border-t border-gray-100 my-1" />
+            <button onClick={openDeleteModal}
+              className="flex items-center gap-3 w-full px-6 py-3.5 text-sm text-red-600 hover:bg-red-50">
+              <Trash2 size={16} className="shrink-0" />
+              {isSender ? "Delete" : "Delete for Me"}
+            </button>
+            <button onClick={handleClose}
+              className="flex items-center gap-3 w-full px-6 py-3.5 text-sm text-gray-400 hover:bg-gray-50">
+              <X size={16} className="shrink-0" /> Cancel
+            </button>
           </div>
-          <div
-            className="fixed inset-0 bg-black/40 z-[10000]"
-            onClick={() => setShowDeleteSheet(false)}
-          />
-        </>,
+        </div>,
         document.body
       )}
 
-      {/* ── Bubble column (chevron + bubble + reactions) ── */}
+      {/* ── Bubble row ── */}
       <div className="flex flex-col group">
-        <div className={clsx("flex items-end gap-1.5", isSender ? "justify-end" : "justify-start")}>
+        <div className={clsx("flex items-end gap-1", isSender ? "justify-end" : "justify-start")}>
 
-          {/* ChevronDown — LEFT side for received messages */}
-          {!isSender && (
-            <button
-              onClick={triggerPopup}
-              className="hidden md:flex w-6 h-6 rounded-full bg-white shadow-sm border border-gray-200 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center hover:bg-gray-50"
-              aria-label="Message options"
+          {/* Reaction button — left of bubble for received messages */}
+          {!isSender && reactionBtn}
+
+          {/* Bubble + inline menu wrapper */}
+          <div className="relative max-w-[75%]">
+
+            {/* The visual bubble */}
+            <div
+              ref={bubbleRef}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              onTouchMove={onTouchEnd}
+              onContextMenu={(e) => e.preventDefault()}
+              className={clsx(
+                "relative w-fit rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
+                (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-1.5",
+                isSender ? "bg-[#d9fdd3] rounded-tr-sm" : "bg-white rounded-tl-sm",
+                highlight    && !isCurrentResult && "ring-2 ring-yellow-300",
+                isCurrentResult                  && "ring-2 ring-yellow-500",
+                isSelected                       && "ring-2 ring-purple-200",
+              )}
             >
-              <ChevronDown size={13} className="text-gray-500" />
-            </button>
-          )}
+              {/* ▾ Arrow inside bubble — desktop hover only */}
+              <button
+                onClick={toggleMenu}
+                aria-label="Message options"
+                className={clsx(
+                  "hidden md:flex absolute top-1 right-1 w-5 h-5 rounded-full z-10",
+                  "items-center justify-center transition-opacity",
+                  isSender ? "bg-[#c5f2c2]/80 hover:bg-[#aeecab]" : "bg-gray-200/70 hover:bg-gray-300/80",
+                  showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}
+              >
+                <ChevronDown size={12} className="text-gray-600" />
+              </button>
 
-          {/* Bubble */}
-          <div
-            ref={bubbleRef}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            onTouchMove={onTouchEnd}
-            onContextMenu={(e) => e.preventDefault()}
-            className={clsx(
-              "max-w-[75%] w-fit rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
-              (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-1.5",
-              isSender ? "bg-[#d9fdd3] rounded-tr-sm" : "bg-white rounded-tl-sm",
-              highlight && !isCurrentResult && "ring-2 ring-yellow-300",
-              isCurrentResult && "ring-2 ring-yellow-500",
-              isSelected && "ring-2 ring-purple-300",
-            )}
-          >
-            {message.replyTo && (
-              <div className={clsx((type === "image" || type === "video") ? "px-3 pt-2" : "")}>
-                <ReplyPreview replyTo={message.replyTo} />
-              </div>
-            )}
-            <MessageContent message={message} isSender={isSender} otherUser={otherUser} />
-            {!hideBottomMeta && (
-              <div className="flex items-center justify-end gap-1 mt-1">
-                <span className="text-[11px] text-gray-500 leading-none select-none">
-                  {formatTime(message.createdAt)}
-                </span>
-                {isSender && <Tick status={message.status} />}
-              </div>
-            )}
+              {message.replyTo && (
+                <div className={clsx((type === "image" || type === "video") ? "px-3 pt-2" : "")}>
+                  <ReplyPreview replyTo={message.replyTo} />
+                </div>
+              )}
+
+              <MessageContent message={message} isSender={isSender} otherUser={otherUser} />
+
+              {!hideBottomMeta && (
+                <div className="flex items-center justify-end gap-1 mt-0.5">
+                  <span className="text-[11px] text-gray-500 leading-none select-none">
+                    {formatTime(message.createdAt)}
+                  </span>
+                  {isSender && <Tick status={message.status} />}
+                </div>
+              )}
+            </div>
+
+            {/* Inline action dropdown — scrolls with the message */}
+            {actionMenu}
+
           </div>
 
-          {/* ChevronDown — RIGHT side for sent messages */}
-          {isSender && (
-            <button
-              onClick={triggerPopup}
-              className="hidden md:flex w-6 h-6 rounded-full bg-white shadow-sm border border-gray-200 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center hover:bg-gray-50"
-              aria-label="Message options"
-            >
-              <ChevronDown size={13} className="text-gray-500" />
-            </button>
-          )}
+          {/* Reaction button — right of bubble for sent messages */}
+          {isSender && reactionBtn}
+
         </div>
 
-        {/* Reactions below bubble */}
-        <div className={clsx("flex", isSender ? "justify-end" : "justify-start")}>
+        {/* Reactions row below bubble */}
+        <div className={clsx("flex", isSender ? "justify-end pr-8" : "justify-start pl-8")}>
           <ReactionsDisplay
             reactions={message.reactions}
             currentUserId={currentUserId}
