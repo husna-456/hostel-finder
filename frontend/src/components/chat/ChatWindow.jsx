@@ -62,32 +62,11 @@ export default function ChatWindow({ conversation, onBack }) {
 
   const messagesEndRef = useRef(null);
   const menuRef        = useRef(null);
-  const setHeightRef   = useRef(null);
 
-  /* ── visual viewport height (fixes Android keyboard gap) ── */
+  /* ── prevent body scroll while chat is open (mobile stability) ── */
   useEffect(() => {
-    const setHeight = () => {
-      const vh = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty("--chat-height", vh + "px");
-    };
-    const handleFocusOut = () => {
-      setTimeout(setHeight, 100);
-      setTimeout(setHeight, 300);
-      setTimeout(setHeight, 500);
-    };
-
-    setHeightRef.current = setHeight;
-    setHeight();
-    window.visualViewport?.addEventListener("resize", setHeight);
-    window.addEventListener("resize", setHeight);
-    window.addEventListener("focusin",  setHeight);
-    window.addEventListener("focusout", handleFocusOut);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", setHeight);
-      window.removeEventListener("resize", setHeight);
-      window.removeEventListener("focusin",  setHeight);
-      window.removeEventListener("focusout", handleFocusOut);
-    };
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
   }, []);
 
   /* ── load messages ── */
@@ -249,9 +228,6 @@ export default function ChatWindow({ conversation, onBack }) {
   /* ── handlers ── */
   const handleSend = (msg) => {
     setMessages((prev) => [...prev, msg]);
-    setTimeout(() => setHeightRef.current?.(), 100);
-    setTimeout(() => setHeightRef.current?.(), 300);
-    setTimeout(() => setHeightRef.current?.(), 600);
   };
 
   const handleSelfDelete = (messageId) => {
@@ -320,16 +296,17 @@ export default function ChatWindow({ conversation, onBack }) {
 
   return (
     <section
-      className="flex flex-col w-full overflow-hidden"
+      className="flex flex-col w-full
+                 max-md:fixed max-md:inset-0
+                 md:relative md:h-full"
       style={{
-        height: "var(--chat-height, 100dvh)",
         backgroundImage: "url('/chat-bg.jpg')",
         backgroundRepeat: "repeat",
         backgroundSize: "300px",
       }}
     >
       {/* ══ HEADER ══ */}
-      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0">
+      <header className="w-full h-16 px-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0 z-10">
 
         <button
           onClick={onBack}

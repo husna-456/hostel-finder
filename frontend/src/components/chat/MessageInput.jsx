@@ -165,6 +165,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     clearReply?.();
     setShowEmoji(false);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const handleKeyDown = (e) => {
@@ -297,7 +298,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   /* ── recording UI ── */
   if (isRecording) {
     return (
-      <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0">
+      <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0"
+           style={{ paddingBottom: "env(safe-area-inset-bottom, 12px)" }}>
         <div className="flex items-center gap-3 bg-red-50 rounded-full px-4 py-2 border border-red-200">
           <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse shrink-0" />
           <span className="flex-1 text-sm font-medium text-red-600 tabular-nums">
@@ -323,7 +325,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   }
 
   return (
-    <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0">
+    <div className="w-full px-4 py-3 bg-white border-t border-gray-100 shrink-0"
+         style={{ paddingBottom: "env(safe-area-inset-bottom, 12px)" }}>
       {/* Hidden file inputs */}
       <input ref={docInputRef}   type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx" onChange={handleDocChange} />
       <input ref={mediaInputRef} type="file" className="hidden" accept="image/*,video/*" onChange={handleMediaChange} />
