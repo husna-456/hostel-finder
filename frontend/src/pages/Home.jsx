@@ -628,8 +628,13 @@ export default function Home() {
                       )}
                       <div>
                         <p className="font-bold text-gray-900">{r.userId?.name || "Anonymous"}</p>
-                        {r.hostelId?.name && (
-                          <p className="text-gray-400 text-sm">{r.hostelId.name}</p>
+                        {r.hostelId?.name ? (
+                          <p className="text-purple-500 text-sm font-medium flex items-center gap-1 mt-0.5">
+                            <Building2 size={12} className="shrink-0" />
+                            {r.hostelId.name}
+                          </p>
+                        ) : (
+                          <p className="text-gray-400 text-sm mt-0.5">Platform Review</p>
                         )}
                       </div>
                     </div>
