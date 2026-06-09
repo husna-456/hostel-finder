@@ -300,7 +300,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   /* ── recording UI ── */
   if (isRecording) {
     return (
-      <div className="w-full px-4 py-3 shrink-0"
+      <div className="w-full bg-white border-t border-gray-100 px-3 py-2 shrink-0"
            style={{ paddingBottom: "max(env(safe-area-inset-bottom, 8px), 8px)" }}>
         <div className="flex items-center gap-3 bg-red-50 rounded-full px-4 py-2 border border-red-200">
           <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse shrink-0" />
@@ -327,7 +327,7 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
   }
 
   return (
-    <div className="w-full px-4 py-3 shrink-0"
+    <div className="w-full bg-white border-t border-gray-100 px-3 py-2 shrink-0"
          style={{ paddingBottom: "max(env(safe-area-inset-bottom, 8px), 8px)" }}>
       {/* Hidden file inputs */}
       <input ref={docInputRef}   type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.ppt,.pptx" onChange={handleDocChange} />
@@ -357,8 +357,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
         </div>
       )}
 
-      <div className="flex items-end">
-        <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-gray-300 shadow-sm px-4 py-0 min-h-[54px]">
+      <div className="flex items-center">
+        <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-gray-200 shadow-sm px-3 py-1.5 min-h-[48px]">
 
           {/* Attach menu */}
           <div ref={attachWrapRef} className="relative shrink-0">
@@ -439,30 +439,29 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
             placeholder={uploading ? "Uploading…" : "Write your message…"}
           />
 
-          {uploading && <Loader2 size={18} className="text-purple-500 animate-spin shrink-0" />}
-
-          {/* Mic button */}
-          <button
-            type="button"
-            onClick={startRecording}
-            disabled={uploading}
-            className="flex items-center justify-center text-gray-600 hover:text-purple-600 transition-colors p-0.5 shrink-0 disabled:opacity-40"
-            aria-label="Record voice note"
-          >
-            <Mic size={20} />
-          </button>
-
-          {/* Send button — inside pill on all screen sizes */}
-          <button
-            type="button"
-            onClick={send}
-            disabled={uploading || !text.trim()}
-            className="flex items-center justify-center w-9 h-9 bg-purple-600 hover:bg-purple-700
-                       text-white rounded-full transition-colors shrink-0 disabled:opacity-60"
-            aria-label="Send"
-          >
-            <RiSendPlaneFill size={15} />
-          </button>
+          {/* Right action — Loader / Send / Mic (one at a time, WhatsApp style) */}
+          {uploading ? (
+            <Loader2 size={18} className="text-purple-500 animate-spin shrink-0" />
+          ) : text.trim() ? (
+            <button
+              type="button"
+              onClick={send}
+              className="flex items-center justify-center w-8 h-8 bg-purple-600 hover:bg-purple-700
+                         text-white rounded-full transition-all shrink-0 shadow-sm"
+              aria-label="Send"
+            >
+              <RiSendPlaneFill size={14} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startRecording}
+              className="flex items-center justify-center text-gray-400 hover:text-purple-600 transition-colors shrink-0"
+              aria-label="Record voice note"
+            >
+              <Mic size={20} />
+            </button>
+          )}
         </div>
       </div>
     </div>
