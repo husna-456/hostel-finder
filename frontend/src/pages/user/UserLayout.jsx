@@ -34,8 +34,9 @@ export default function UserLayout() {
             logoutPath="/"
           />
         )}
-        <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto ${isChatPage ? "" : "px-4 pt-4 pb-16 md:px-6 md:pt-6 md:pb-10"}`}>
+        <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto ${isChatPage ? "" : "px-4 pt-4 md:px-6 md:pt-6"}`}>
           <Outlet />
+          {!isChatPage && <div className="shrink-0 h-16 md:h-10" aria-hidden="true" />}
         </main>
       </div>
     </div>
