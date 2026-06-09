@@ -94,21 +94,18 @@ export const updateSiteContent = async (req, res) => {
     return res.status(400).json({ message: "Invalid section" });
 
   try {
-    let doc = await SiteContent.findOne({ section });
-    if (doc) {
-      doc.data = req.body;
-      doc.markModified("data"); // required: Mongoose won't auto-detect Mixed changes
-      await doc.save();
-    } else {
-      doc = new SiteContent({ section, data: req.body });
-      await doc.save();
-    }
-    // Re-read with .lean() to confirm what's actually stored
+    // Use raw driver — bypasses Mongoose strict-mode and Mixed-type detection entirely
+    await SiteContent.collection.updateOne(
+      { section },
+      { $set: { data: req.body, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    // Re-read to confirm exactly what is now in the database
     const saved = await SiteContent.findOne({ section }).lean();
-    res.json(saved.data);
+    res.json(saved?.data ?? DEFAULTS[section]);
   } catch (err) {
     console.error("updateSiteContent error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 

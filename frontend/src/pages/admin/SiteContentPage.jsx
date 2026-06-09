@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchClient } from "../../api/fetchClient";
 import { toast } from "react-toastify";
-import { Plus, Trash2, Save, RotateCcw, Loader2, Globe, Phone, Mail, MapPin, Clock, HelpCircle, BarChart2 } from "lucide-react";
+import { Plus, Trash2, Save, RotateCcw, Loader2, Globe, Phone, Mail, MapPin, Clock, HelpCircle, BarChart2, ExternalLink } from "lucide-react";
 
 // ── Shared field component ─────────────────────────────────────────────────
 const Field = ({ label, children }) => (
@@ -249,7 +249,7 @@ function Section({ icon: Icon, title, children }) {
 // ── Main page ──────────────────────────────────────────────────────────────
 const TABS = [
   { key: "contact", label: "Contact Page" },
-  { key: "facts",   label: "Facts Page"   },
+  { key: "facts",   label: "FAQs Page"    },
 ];
 
 export default function SiteContentPage() {
@@ -312,6 +312,14 @@ export default function SiteContentPage() {
           <p className="text-sm text-gray-500 mt-0.5">Manage public-facing content for Contact and Facts pages</p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={activeTab === "contact" ? "/Contact" : "/FAQs"}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-50 transition"
+          >
+            <ExternalLink size={14} /> View Page
+          </a>
           <button
             onClick={handleReset}
             disabled={saving || loading}
