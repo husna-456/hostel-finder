@@ -314,7 +314,7 @@ export const getFeaturedHostels = async (req, res) => {
     const settings = await Settings.findOne().lean();
     const limit = settings?.featuredHostelLimit || 6;
 
-    const hostels = await Hostel.find({ featured: true, isBlocked: false })
+    const hostels = await Hostel.find({ featured: true, isBlocked: { $ne: true } })
       .sort({ featuredOrder: 1, createdAt: -1 })
       .limit(limit)
       .select("name type address startingRent facilities images featuredOrder");

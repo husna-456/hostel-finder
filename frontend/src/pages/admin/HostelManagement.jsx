@@ -51,7 +51,7 @@ export default function HostelManagement() {
       });
       setHostels(prev => prev.map(h => h._id === hostel._id ? { ...h, featured: data.hostel.featured } : h));
       toast.success(data.hostel.featured ? "Hostel marked as featured" : "Removed from featured");
-    } catch { toast.error("Action failed"); }
+    } catch (err) { toast.error(err?.message || "Action failed"); }
   };
 
   const openEdit = (hostel) => {
