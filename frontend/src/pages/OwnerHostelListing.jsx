@@ -200,7 +200,7 @@ export default function OwnerHostelListing() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 pb-6 md:p-6 md:pb-8 lg:p-8 lg:pb-10">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

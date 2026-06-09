@@ -173,7 +173,7 @@ export default function OwnerBookings() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 pb-6 md:p-6 md:pb-8 lg:p-8 lg:pb-10">
       <div className="max-w-7xl mx-auto space-y-5">
 
         {/* Header */}

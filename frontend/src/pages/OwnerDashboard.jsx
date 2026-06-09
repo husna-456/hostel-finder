@@ -39,7 +39,7 @@ export default function OwnerDashboard() {
     s === "rejected" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 pb-6 md:p-6 md:pb-8 lg:p-8 lg:pb-10">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard Overview</h2>
