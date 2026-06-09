@@ -4,6 +4,7 @@ import verifySocketToken from "../utils/verifySocketToken.js";
 import Message from "../models/Message.js";
 import Conversation from "../models/Conversation.js";
 import User from "../models/User.js";
+import { notifyNewMessage, clearChatNotifications } from "../services/notificationService.js";
 
 const REPLY_POPULATE = {
   path: "replyTo",
@@ -61,6 +62,9 @@ export const initSocket = (server) => {
           $set: { [`unreadCounts.${userId}`]: 0 },
         });
         io.to(userId).emit("unread_count_update", { conversationId, unreadCount: 0 });
+
+        // Clear any unread NEW_MESSAGE notifications for this conversation
+        clearChatNotifications({ receiverId: userId, conversationId }).catch(() => {});
       } catch (err) {
         console.error("mark seen error:", err.message);
       }
@@ -211,6 +215,15 @@ export const initSocket = (server) => {
               unreadCount: newCount,
               lastMessage: lastMessagePreview,
             });
+
+            // Anti-spam aggregated notification: one document per conversation, updated on each message
+            try {
+              const sender = await User.findById(senderId).select("name").lean();
+              const senderName = sender?.name || "Someone";
+              const isOwnerReceiving = receiverId === convo.ownerId.toString();
+              const notifLink = isOwnerReceiving ? "/hostel_owner/chat" : "/user/chat";
+              notifyNewMessage({ receiverId, senderId, conversationId, senderName, link: notifLink }).catch(() => {});
+            } catch (_) {}
           }
           io.to(senderId).emit("unread_count_update", {
             conversationId,

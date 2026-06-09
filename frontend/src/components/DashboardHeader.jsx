@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, UserCog, LogOut, Menu } from "lucide-react";
+import { ChevronDown, UserCog, LogOut, Menu } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function DashboardHeader({ title, onMenuClick, profilePath, logoutPath = "/" }) {
   const { logout, user } = useAuth();
@@ -48,10 +49,7 @@ export default function DashboardHeader({ title, onMenuClick, profilePath, logou
         <h1 className="text-base font-semibold text-gray-800 flex-1">{title}</h1>
 
         <div className="flex items-center gap-1.5">
-          <button className="relative p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition">
-            <Bell size={19} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-600 rounded-full" />
-          </button>
+          <NotificationDropdown />
 
           <button
             onClick={openDropdown}

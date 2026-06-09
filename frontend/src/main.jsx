@@ -8,6 +8,7 @@ import App from "./App.jsx";
 import { SearchProvider } from "./context/SearchContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 //toast
 
@@ -17,9 +18,11 @@ createRoot(document.getElementById("root")).render(
         <BrowserRouter>
             <AuthProvider>
                 <SocketProvider>
+                  <NotificationProvider>
 
                     <App />
 
+                  </NotificationProvider>
                 </SocketProvider>
             </AuthProvider>
         </BrowserRouter>

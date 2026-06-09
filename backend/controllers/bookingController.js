@@ -5,6 +5,7 @@ import Payment from "../models/Payment.js";
 import { Hostel } from "../models/Hostel.js";
 import User from "../models/User.js";
 import transporter from "../config/nodemailer.js";
+import { notify } from "../services/notificationService.js";
 
 // --------------------------------
 // USER: Create Booking
@@ -80,6 +81,18 @@ export const createBooking = async (req, res) => {
         });
       }
     } catch (_) {}
+
+    // Notify hostel owner of new booking request
+    const ownerId = populated.hostelId?.ownerId;
+    if (ownerId) {
+      notify({
+        type:       "BOOKING_REQUEST",
+        receiverId: ownerId,
+        senderId:   userId,
+        entityId:   savedBooking._id,
+        data:       { guestName: name, hostelName },
+      }).catch(() => {});
+    }
 
     res.status(201).json({ message: "Booking created!", booking: populated });
 
@@ -203,6 +216,22 @@ export const updateBookingStatus = async (req, res) => {
     const updatedBooking = await Booking.findById(id)
       .populate("hostelId", "name")
       .populate("userId", "name email");
+
+    // Notify the student when owner accepts or rejects
+    if (status === "accepted" || status === "rejected") {
+      const notifType  = status === "accepted" ? "BOOKING_ACCEPTED" : "BOOKING_REJECTED";
+      const hostelName = updatedBooking.hostelId?.name || "your hostel";
+      const studentId  = updatedBooking.userId?._id;
+      if (studentId) {
+        notify({
+          type:       notifType,
+          receiverId: studentId,
+          senderId:   req.user._id,
+          entityId:   updatedBooking._id,
+          data:       { hostelName },
+        }).catch(() => {});
+      }
+    }
 
     return res.json(updatedBooking);
   } catch (error) {
