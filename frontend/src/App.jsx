@@ -70,7 +70,6 @@ import HostelDetails from "./pages/HostelDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import FAQs from "./components/FAQ";
 import ContactUs from "./components/Contactus";
-import Facts from "./pages/Facts";
 
 
 // ✅ PrivateRoute Component
@@ -148,7 +147,6 @@ function App() {
           <Route path="/hostels/:id" element={<HostelDetails />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/advanced-search" element={<AdvancedSearch />} />
-          <Route path="/facts" element={<Facts />} />
           <Route path="/book-hostel" element={<BookHostel />} />
           <Route path="/book-hostel/:id" element={<BookHostel />} />
 
