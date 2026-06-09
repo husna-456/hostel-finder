@@ -39,7 +39,7 @@ export default function DashboardHeader({ title, onMenuClick, profilePath, logou
       <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center shrink-0 gap-3 sticky top-0 z-30">
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+          className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
           aria-label="Toggle sidebar"
         >
           <Menu size={18} />
