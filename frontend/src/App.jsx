@@ -32,6 +32,7 @@ import HostelManagement from "./pages/admin/HostelManagement";
 import BookingManagement from "./pages/admin/BookingManagement";
 import ChatMonitoring from "./pages/admin/ChatMonitoring";
 import SettingsPage from "./pages/admin/SettingsPage";
+import SiteContentPage from "./pages/admin/SiteContentPage";
 
 // ✅ Owner Pages
 import OwnerLayout from "./pages/OwnerLayout";
@@ -69,6 +70,7 @@ import HostelDetails from "./pages/HostelDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import FAQs from "./components/FAQ";
 import ContactUs from "./components/Contactus";
+import Facts from "./pages/Facts";
 
 
 // ✅ PrivateRoute Component
@@ -146,6 +148,7 @@ function App() {
           <Route path="/hostels/:id" element={<HostelDetails />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/advanced-search" element={<AdvancedSearch />} />
+          <Route path="/facts" element={<Facts />} />
           <Route path="/book-hostel" element={<BookHostel />} />
           <Route path="/book-hostel/:id" element={<BookHostel />} />
 
@@ -165,8 +168,9 @@ function App() {
             <Route path="hostels" element={<HostelManagement />} />
             <Route path="bookings" element={<BookingManagement />} />
             <Route path="chats" element={<ChatMonitoring />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="settings"      element={<SettingsPage />}     />
+            <Route path="site-content" element={<SiteContentPage />} />
+            <Route path="profile"      element={<ProfilePage />}     />
           </Route>
 
           {/* 🏠 Owner Routes */}

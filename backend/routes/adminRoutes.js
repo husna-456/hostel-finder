@@ -9,6 +9,7 @@ import {
   getAllConversations,
 } from "../controllers/adminController.js";
 import { getSettings, updateSettings } from "../controllers/settingsController.js";
+import { getPublicSiteContent, updateSiteContent, resetSiteContent } from "../controllers/siteContentController.js";
 import { protect, checkRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -48,5 +49,10 @@ router.get("/conversations", ...admin, getAllConversations);
 // Settings
 router.get("/settings", ...admin, getSettings);
 router.put("/settings", ...admin, updateSettings);
+
+// Site Content (contact / facts pages)
+router.get("/site-content/:section",    ...admin, getPublicSiteContent);
+router.put("/site-content/:section",    ...admin, updateSiteContent);
+router.delete("/site-content/:section", ...admin, resetSiteContent);
 
 export default router;

@@ -4,7 +4,7 @@ import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCog, Building2, CalendarCheck,
-  MessageSquare, X, Settings, ChevronDown, LogOut,
+  MessageSquare, X, Settings, ChevronDown, LogOut, FileText,
 } from "lucide-react";
 import DashboardHeader from "../DashboardHeader";
 
@@ -14,8 +14,9 @@ const navItems = [
   { label: "Owner Management",   icon: UserCog,         path: "/admin/owners"    },
   { label: "Hostel Management",  icon: Building2,       path: "/admin/hostels"   },
   { label: "Booking Management", icon: CalendarCheck,   path: "/admin/bookings"  },
-  { label: "Chat Monitoring",    icon: MessageSquare,   path: "/admin/chats"     },
-  { label: "Settings",           icon: Settings,        path: "/admin/settings"  },
+  { label: "Chat Monitoring",    icon: MessageSquare,   path: "/admin/chats"        },
+  { label: "Site Content",       icon: FileText,        path: "/admin/site-content" },
+  { label: "Settings",           icon: Settings,        path: "/admin/settings"     },
 ];
 
 export default function AdminLayout() {

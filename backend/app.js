@@ -18,6 +18,7 @@ import conversationRoutes from "./routes/conversation.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import siteContentRoutes from "./routes/siteContentRoutes.js";
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/site-content", siteContentRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
