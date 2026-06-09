@@ -57,6 +57,8 @@ function AnimatedCounter({ target, suffix = "" }) {
   const started           = useRef(false);
 
   useEffect(() => {
+    started.current = false;
+    setCount(0);
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
