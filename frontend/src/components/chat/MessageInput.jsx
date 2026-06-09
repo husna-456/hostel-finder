@@ -357,8 +357,8 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <div className="flex-1 flex items-end gap-1 bg-gray-100 rounded-2xl px-3 py-2 border border-gray-200">
+      <div className="flex items-end gap-2 md:gap-0">
+        <div className="flex-1 flex items-end gap-1 bg-gray-100 rounded-2xl px-3 py-2 border border-gray-200 md:bg-white md:rounded-full md:border-gray-300 md:shadow-sm md:items-center md:px-4 md:py-0 md:min-h-[54px] md:gap-2">
 
           {/* Attach menu */}
           <div ref={attachWrapRef} className="relative shrink-0">
@@ -451,14 +451,26 @@ export default function MessageInput({ conversationId, onSend, replyTo, clearRep
           >
             <Mic size={20} />
           </button>
+
+          {/* Desktop-only send button — lives inside the pill */}
+          <button
+            type="button"
+            onClick={send}
+            disabled={uploading || !text.trim()}
+            className="hidden md:flex items-center justify-center w-9 h-9 bg-purple-600 hover:bg-purple-700
+                       text-white rounded-full transition-colors shrink-0 disabled:opacity-60"
+            aria-label="Send"
+          >
+            <RiSendPlaneFill size={15} />
+          </button>
         </div>
 
-        {/* Send button */}
+        {/* Mobile-only send button — standalone circle */}
         <button
           type="button"
           onClick={send}
           disabled={uploading || !text.trim()}
-          className="w-9 h-9 flex items-center justify-center bg-purple-600 hover:bg-purple-700
+          className="md:hidden w-9 h-9 flex items-center justify-center bg-purple-600 hover:bg-purple-700
                      text-white rounded-full transition-colors shrink-0 disabled:opacity-60"
           aria-label="Send"
         >
