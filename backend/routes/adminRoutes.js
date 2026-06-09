@@ -36,7 +36,7 @@ router.delete("/owners/:id",                ...admin, deleteUser);
 // Hostels
 router.get("/hostels",               ...admin, getAllHostels);
 router.patch("/hostels/:id/block",   ...admin, toggleHostelBlock);
-router.patch("/hostels/:id/feature", ...admin, toggleFeatured);
+router.patch("/hostels/:id/feature", ...admin, adminToggleFeatured);
 router.put("/hostels/:id",           ...admin, adminUpdateHostel);
 router.delete("/hostels/:id",        ...admin, adminDeleteHostel);
 
