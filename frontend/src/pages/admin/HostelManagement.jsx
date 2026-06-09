@@ -44,14 +44,15 @@ export default function HostelManagement() {
   };
 
   const toggleFeatured = async (hostel) => {
+    const newVal = !hostel.featured;
     try {
-      const data = await fetchClient(`/hostels/${hostel._id}/feature`, {
+      const data = await fetchClient(`/admin/hostels/${hostel._id}/feature`, {
         method: "PATCH",
-        body: JSON.stringify({ featured: !hostel.featured }),
+        body: JSON.stringify({ featured: newVal }),
       });
       setHostels(prev => prev.map(h => h._id === hostel._id ? { ...h, featured: data.hostel.featured } : h));
-      toast.success(data.hostel.featured ? "Hostel marked as featured" : "Removed from featured");
-    } catch (err) { toast.error(err?.message || "Action failed"); }
+      toast.success(data.hostel.featured ? "⭐ Hostel marked as featured" : "Removed from featured");
+    } catch (err) { toast.error(err?.message || "Failed to update featured status"); }
   };
 
   const openEdit = (hostel) => {

@@ -208,6 +208,22 @@ export const adminUpdateHostel = async (req, res) => {
   }
 };
 
+export const adminToggleFeatured = async (req, res) => {
+  try {
+    const { featured, featuredOrder } = req.body;
+    const update = {};
+    if (featured !== undefined) update.featured = featured;
+    if (featuredOrder !== undefined) update.featuredOrder = featuredOrder;
+
+    const hostel = await Hostel.findByIdAndUpdate(req.params.id, { $set: update }, { new: true });
+    if (!hostel) return res.status(404).json({ message: "Hostel not found" });
+
+    res.json({ message: `Hostel ${hostel.featured ? "marked as featured" : "removed from featured"}`, hostel });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 export const adminDeleteHostel = async (req, res) => {
   try {
     await Booking.updateMany(

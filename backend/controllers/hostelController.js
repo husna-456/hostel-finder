@@ -311,16 +311,20 @@ export const getNearbyHostels = async (req, res) => {
 // ── Public: get featured hostels ─────────────────────────────────────────────
 export const getFeaturedHostels = async (req, res) => {
   try {
-    const settings = await Settings.findOne().lean();
-    const limit = settings?.featuredHostelLimit || 6;
+    let limit = 6;
+    try {
+      const settings = await Settings.findOne().lean();
+      if (settings?.featuredHostelLimit) limit = settings.featuredHostelLimit;
+    } catch (_) {}
 
-    const hostels = await Hostel.find({ featured: true, isBlocked: { $ne: true } })
+    const hostels = await Hostel.find({ featured: true })
       .sort({ featuredOrder: 1, createdAt: -1 })
       .limit(limit)
-      .select("name type address startingRent facilities images featuredOrder");
+      .select("name type address startingRent facilities images featuredOrder isBlocked");
 
-    res.json(hostels);
+    res.json(hostels.filter(h => !h.isBlocked));
   } catch (err) {
+    console.error("getFeaturedHostels error:", err.message);
     res.status(500).json({ message: err.message });
   }
 };

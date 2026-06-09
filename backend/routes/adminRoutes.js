@@ -4,7 +4,7 @@ import {
   getAllUsers, getUserById, deleteUser, updateUserRole, toggleUserBlock,
   adminEditUser, adminResetPassword,
   getAllOwners,
-  getAllHostels, toggleHostelBlock, adminUpdateHostel, adminDeleteHostel,
+  getAllHostels, toggleHostelBlock, adminUpdateHostel, adminDeleteHostel, adminToggleFeatured,
   getAllBookings, forceCancelBooking,
   getAllConversations,
 } from "../controllers/adminController.js";
@@ -36,6 +36,7 @@ router.delete("/owners/:id",                ...admin, deleteUser);
 // Hostels
 router.get("/hostels",               ...admin, getAllHostels);
 router.patch("/hostels/:id/block",   ...admin, toggleHostelBlock);
+router.patch("/hostels/:id/feature", ...admin, toggleFeatured);
 router.put("/hostels/:id",           ...admin, adminUpdateHostel);
 router.delete("/hostels/:id",        ...admin, adminDeleteHostel);
 

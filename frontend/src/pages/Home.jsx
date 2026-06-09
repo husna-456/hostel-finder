@@ -165,7 +165,7 @@ export default function Home() {
   useEffect(() => {
     fetchClient("/hostels/featured")
       .then((data) => setFeaturedHostels(Array.isArray(data) ? data : []))
-      .catch(() => setFeaturedHostels([]))
+      .catch((err) => { console.error("Featured hostels error:", err); setFeaturedHostels([]); })
       .finally(() => setLoadingFeatured(false));
 
     fetchClient("/reviews/approved")
