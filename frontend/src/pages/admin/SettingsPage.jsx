@@ -3,7 +3,7 @@ import { fetchClient } from "../../api/fetchClient";
 import { toast } from "react-toastify";
 import { Save, Settings as SettingsIcon } from "lucide-react";
 
-const TABS = ["General", "Booking & Payments", "Access Control", "Legal"];
+const TABS = ["General", "Booking & Payments", "Access Control", "Reviews", "Legal"];
 
 function Toggle({ label, description, checked, onChange }) {
   return (
@@ -213,8 +213,43 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── Legal ── */}
+        {/* ── Reviews ── */}
         {tab === 3 && (
+          <div className="space-y-5">
+            <h2 className="text-base font-bold text-gray-700 mb-1">Student Reviews</h2>
+            <Toggle
+              label="Enable Reviews Section"
+              description="Show the 'What Students Say' section on the homepage"
+              checked={!!form.reviewsEnabled}
+              onChange={set("reviewsEnabled")}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Field
+                label="Reviews on Homepage"
+                description="Max number of approved reviews shown on the homepage"
+                type="number"
+                value={form.reviewsLimit ?? 6}
+                onChange={v => set("reviewsLimit")(Number(v))}
+                min={1} max={20}
+              />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Sort Reviews By</label>
+                <p className="text-xs text-gray-500 mb-1.5">Order of reviews shown on the homepage</p>
+                <select
+                  value={form.reviewsSortBy || "latest"}
+                  onChange={e => set("reviewsSortBy")(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-500 outline-none"
+                >
+                  <option value="latest">Latest First</option>
+                  <option value="highest_rated">Highest Rated</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Legal ── */}
+        {tab === 4 && (
           <div className="space-y-5">
             <h2 className="text-base font-bold text-gray-700 mb-1">Legal Texts</h2>
             <Field

@@ -33,6 +33,7 @@ import BookingManagement from "./pages/admin/BookingManagement";
 import ChatMonitoring from "./pages/admin/ChatMonitoring";
 import SettingsPage from "./pages/admin/SettingsPage";
 import SiteContentPage from "./pages/admin/SiteContentPage";
+import ReviewManagement from "./pages/admin/ReviewManagement";
 
 // ✅ Owner Pages
 import OwnerLayout from "./pages/OwnerLayout";
@@ -54,6 +55,7 @@ import MyBookings from "./pages/user/MyBookings";
 import MessagesPage from "./pages/user/MessagesPage";
 import PaymentPage from "./pages/user/PaymentPage";
 import PaymentsPage from "./pages/user/PaymentsPage";
+import ReviewsPage from "./pages/user/ReviewsPage";
 import PaymentSuccessPage from "./pages/user/PaymentSuccessPage";
 
 // ✅ Shared
@@ -172,6 +174,7 @@ function App() {
             <Route path="chats" element={<ChatMonitoring />} />
             <Route path="settings"      element={<SettingsPage />}     />
             <Route path="site-content" element={<SiteContentPage />} />
+            <Route path="reviews"      element={<ReviewManagement />} />
             <Route path="profile"      element={<ProfilePage />}     />
           </Route>
 
@@ -231,6 +234,7 @@ function App() {
             <Route path="payment/:bookingId" element={<PaymentPage />} />
             <Route path="payment-success" element={<PaymentSuccessPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="reviews" element={<ReviewsPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 

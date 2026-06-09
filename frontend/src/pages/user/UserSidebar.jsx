@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, List, BookOpen, CalendarCheck,
-  CreditCard, MessageSquare, Menu, X, ChevronDown, UserCog, LogOut,
+  CreditCard, MessageSquare, Menu, X, ChevronDown, UserCog, LogOut, Star,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -14,6 +14,7 @@ const navItems = [
   { label: "My Bookings",   icon: CalendarCheck,   path: "/user/my-bookings"    },
   { label: "Payments",      icon: CreditCard,      path: "/user/payments"       },
   { label: "Messages",      icon: MessageSquare,   path: "/user/chat"           },
+  { label: "My Reviews",    icon: Star,            path: "/user/reviews"        },
 ];
 
 export default function UserSidebar({ isOpen, setIsOpen }) {

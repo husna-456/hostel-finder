@@ -1,8 +1,9 @@
 import HeroSection from "../components/HeroSection";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
+import { fetchClient } from "../api/fetchClient";
 import {
   ShieldCheck,
   MapPin,
@@ -44,42 +45,46 @@ function Reveal({ children, delay = 0, dir = "up", className = "" }) {
   );
 }
 
-/* ─── Data ───────────────────────────────────────────────────────────────── */
-const FEATURED_HOSTELS = [
-  {
-    id: 1,
-    name: "Fatima Jinnah Girls Hostel",
-    location: "Satellite Town, Rawalpindi",
-    price: "PKR 8,000",
-    rating: 4.8,
-    badge: "Girls Only",
-    badgeColor: "bg-pink-500",
-    tags: ["WiFi", "Study Area", "Meals"],
-    img: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80",
-  },
-  {
-    id: 2,
-    name: "Capital Executive Hostel",
-    location: "G-11 Markaz, Islamabad",
-    price: "PKR 15,000",
-    rating: 4.9,
-    badge: "Premium",
-    badgeColor: "bg-violet-600",
-    tags: ["AC Rooms", "Gym", "Café"],
-    img: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
-  },
-  {
-    id: 3,
-    name: "The Maryam Residency",
-    location: "Gulshan-e-Iqbal, Karachi",
-    price: "PKR 12,500",
-    rating: 4.7,
-    badge: "Verified",
-    badgeColor: "bg-teal-600",
-    tags: ["Security", "Backup Power"],
-    img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-  },
-];
+/* ─── Skeleton loader ────────────────────────────────────────────────────── */
+function CardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 animate-pulse">
+      <div className="h-56 bg-gray-200" />
+      <div className="p-6 space-y-3">
+        <div className="h-5 bg-gray-200 rounded w-3/4" />
+        <div className="h-4 bg-gray-100 rounded w-1/2" />
+        <div className="flex gap-2">
+          <div className="h-6 w-14 bg-gray-100 rounded-full" />
+          <div className="h-6 w-14 bg-gray-100 rounded-full" />
+        </div>
+        <div className="h-px bg-gray-100 mt-2" />
+        <div className="flex justify-between pt-1">
+          <div className="h-6 w-24 bg-gray-200 rounded" />
+          <div className="h-8 w-20 bg-gray-200 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 animate-pulse space-y-4">
+      <div className="flex gap-1">{[...Array(5)].map((_, i) => <div key={i} className="w-4 h-4 bg-gray-200 rounded" />)}</div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-100 rounded w-full" />
+        <div className="h-4 bg-gray-100 rounded w-5/6" />
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 bg-gray-200 rounded-full" />
+        <div className="space-y-1">
+          <div className="h-4 bg-gray-200 rounded w-24" />
+          <div className="h-3 bg-gray-100 rounded w-16" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const HOW_IT_WORKS = [
   {
@@ -152,6 +157,22 @@ export default function Home() {
   const { role } = useAuth();
   const [chatInput, setChatInput] = useState("");
   const [email, setEmail] = useState("");
+  const [featuredHostels, setFeaturedHostels] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    fetchClient("/hostels/featured")
+      .then((data) => setFeaturedHostels(Array.isArray(data) ? data : []))
+      .catch(() => setFeaturedHostels([]))
+      .finally(() => setLoadingFeatured(false));
+
+    fetchClient("/reviews/approved")
+      .then((data) => setReviews(Array.isArray(data) ? data : []))
+      .catch(() => setReviews([]))
+      .finally(() => setLoadingReviews(false));
+  }, []);
 
   const handleSearch = (filters) => console.log(filters);
 
@@ -228,79 +249,86 @@ export default function Home() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {FEATURED_HOSTELS.map((h, i) => (
-              <Reveal key={h.id} delay={i * 0.13}>
-                <motion.div
-                  whileHover={{ y: -10 }}
-                  transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl border border-gray-100 hover:border-purple-100 group transition-all duration-300"
-                >
-                  {/* Image */}
-                  <div className="relative h-56 overflow-hidden">
-                    <motion.img
-                      src={h.img}
-                      alt={h.name}
-                      className="w-full h-full object-cover"
-                      whileHover={{ scale: 1.08 }}
-                      transition={{ duration: 0.5 }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                    <span className={`absolute top-3 left-3 ${h.badgeColor} text-white text-xs font-bold px-3 py-1.5 rounded-full`}>
-                      {h.badge}
-                    </span>
-                    <div className="absolute top-3 right-3 bg-white/95 text-gray-800 text-xs font-bold px-2.5 py-1.5 rounded-full shadow flex items-center gap-1">
-                      <Star size={11} fill="#facc15" stroke="none" /> {h.rating}
+          {loadingFeatured ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : featuredHostels.length === 0 ? (
+            <div className="text-center py-16">
+              <Building2 size={48} className="text-gray-200 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">No featured hostels yet</p>
+              <Link to="/all-hostels" className="text-purple-600 font-semibold mt-3 inline-block hover:underline">
+                Browse all hostels →
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredHostels.map((h, i) => (
+                <Reveal key={h._id} delay={i * 0.13}>
+                  <motion.div
+                    whileHover={{ y: -10 }}
+                    transition={{ type: "spring", stiffness: 280, damping: 20 }}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl border border-gray-100 hover:border-purple-100 group transition-all duration-300"
+                  >
+                    <div className="relative h-56 overflow-hidden bg-purple-50">
+                      {h.images?.[0] ? (
+                        <motion.img
+                          src={h.images[0]}
+                          alt={h.name}
+                          className="w-full h-full object-cover"
+                          whileHover={{ scale: 1.08 }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Building2 size={48} className="text-purple-200" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                      <span className="absolute top-3 left-3 bg-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full capitalize">
+                        {h.type || "hostel"}
+                      </span>
                     </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="p-6">
-                    <h3 className="font-bold text-gray-900 text-lg mb-1.5 group-hover:text-purple-700 transition-colors leading-snug">
-                      {h.name}
-                    </h3>
-                    <p className="text-gray-400 text-sm flex items-center gap-1.5 mb-4">
-                      <MapPin size={13} className="text-purple-400 flex-shrink-0" />
-                      {h.location}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5 mb-5">
-                      {h.tags.map((t) => (
-                        <span key={t} className="bg-purple-50 text-purple-600 text-xs font-medium px-3 py-1 rounded-full border border-purple-100">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div>
-                        <p className="text-[11px] text-gray-400 uppercase tracking-widest">From</p>
-                        <p className="text-purple-700 font-extrabold text-xl leading-tight">
-                          {h.price}
-                          <span className="text-gray-400 font-normal text-xs"> /mo</span>
-                        </p>
+                    <div className="p-6">
+                      <h3 className="font-bold text-gray-900 text-lg mb-1.5 group-hover:text-purple-700 transition-colors leading-snug">
+                        {h.name}
+                      </h3>
+                      <p className="text-gray-400 text-sm flex items-center gap-1.5 mb-4">
+                        <MapPin size={13} className="text-purple-400 flex-shrink-0" />
+                        {h.address || "—"}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mb-5">
+                        {(h.facilities || []).slice(0, 3).map((t) => (
+                          <span key={t} className="bg-purple-50 text-purple-600 text-xs font-medium px-3 py-1 rounded-full border border-purple-100">
+                            {t}
+                          </span>
+                        ))}
                       </div>
-                      <div className="flex gap-2">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="border border-purple-200 text-purple-700 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-purple-50 transition-colors"
-                        >
-                          Details
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5"
-                        >
-                          <MessageCircle size={14} />
-                          Chat
-                        </motion.button>
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div>
+                          <p className="text-[11px] text-gray-400 uppercase tracking-widest">From</p>
+                          <p className="text-purple-700 font-extrabold text-xl leading-tight">
+                            PKR {(h.startingRent || 0).toLocaleString()}
+                            <span className="text-gray-400 font-normal text-xs"> /mo</span>
+                          </p>
+                        </div>
+                        <Link to={`/hostels/${h._id}`}>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5"
+                          >
+                            View Details
+                            <ChevronRight size={14} />
+                          </motion.button>
+                        </Link>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              </Reveal>
-            ))}
-          </div>
+                  </motion.div>
+                </Reveal>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -567,41 +595,49 @@ export default function Home() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
-            {[
-              { name: "Ayesha Tariq", uni: "NUST Islamabad", text: "Found an amazing girls hostel within 2km of campus. The search filter is so easy to use!", rating: 5 },
-              { name: "Ahmed Raza", uni: "FAST Lahore", text: "Compared 5 hostels side by side and booked the best one in under 10 minutes. Love it!", rating: 5 },
-              { name: "Sara Khan", uni: "UET Peshawar", text: "The direct chat with owners saved me so much time. No more calling random numbers!", rating: 4 },
-            ].map((t, i) => (
-              <Reveal key={t.name} delay={i * 0.12}>
-                <motion.div
-                  whileHover={{ y: -6 }}
-                  className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:border-purple-100 hover:shadow-lg transition-all"
-                >
-                  <div className="flex gap-0.5 mb-4">
-                    {[...Array(5)].map((_, j) => (
-                      <Star
-                        key={j}
-                        size={16}
-                        fill={j < t.rating ? "#facc15" : "#e5e7eb"}
-                        stroke="none"
-                      />
-                    ))}
-                  </div>
-                  <p className="text-gray-600 text-base leading-relaxed mb-6 italic">"{t.text}"</p>
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center text-white font-extrabold text-base">
-                      {t.name[0]}
+          {loadingReviews ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+              {[...Array(3)].map((_, i) => <ReviewSkeleton key={i} />)}
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="text-center py-16">
+              <Star size={48} className="text-gray-200 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">No approved reviews yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+              {reviews.map((r, i) => (
+                <Reveal key={r._id} delay={i * 0.12}>
+                  <motion.div
+                    whileHover={{ y: -6 }}
+                    className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:border-purple-100 hover:shadow-lg transition-all"
+                  >
+                    <div className="flex gap-0.5 mb-4">
+                      {[...Array(5)].map((_, j) => (
+                        <Star key={j} size={16} fill={j < r.rating ? "#facc15" : "#e5e7eb"} stroke="none" />
+                      ))}
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{t.name}</p>
-                      <p className="text-gray-400 text-sm">{t.uni}</p>
+                    <p className="text-gray-600 text-base leading-relaxed mb-6 italic">"{r.reviewText}"</p>
+                    <div className="flex items-center gap-3.5">
+                      {r.userId?.profilePicture ? (
+                        <img src={r.userId.profilePicture} alt={r.userId.name} className="w-11 h-11 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center text-white font-extrabold text-base">
+                          {r.userId?.name?.[0] || "?"}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-gray-900">{r.userId?.name || "Anonymous"}</p>
+                        {r.hostelId?.name && (
+                          <p className="text-gray-400 text-sm">{r.hostelId.name}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              </Reveal>
-            ))}
-          </div>
+                  </motion.div>
+                </Reveal>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

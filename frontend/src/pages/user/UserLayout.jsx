@@ -11,6 +11,7 @@ const titleMap = {
   "/user/payments":       "Payments",
   "/user/chat":           "Messages",
   "/user/profile":        "My Profile",
+  "/user/reviews":        "My Reviews",
 };
 
 export default function UserLayout() {

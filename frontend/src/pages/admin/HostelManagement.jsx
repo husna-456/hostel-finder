@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchClient } from "../../api/fetchClient";
-import { Search, MapPin, Ban, CheckCircle, Trash2, Edit } from "lucide-react";
+import { Search, MapPin, Ban, CheckCircle, Trash2, Edit, Star } from "lucide-react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
@@ -41,6 +41,17 @@ export default function HostelManagement() {
       setHostels(prev => prev.filter(h => h._id !== hostel._id));
       toast.success("Hostel deleted");
     } catch { toast.error("Delete failed"); }
+  };
+
+  const toggleFeatured = async (hostel) => {
+    try {
+      const data = await fetchClient(`/hostels/${hostel._id}/feature`, {
+        method: "PATCH",
+        body: JSON.stringify({ featured: !hostel.featured }),
+      });
+      setHostels(prev => prev.map(h => h._id === hostel._id ? { ...h, featured: data.hostel.featured } : h));
+      toast.success(data.hostel.featured ? "Hostel marked as featured" : "Removed from featured");
+    } catch { toast.error("Action failed"); }
   };
 
   const openEdit = (hostel) => {
@@ -142,7 +153,10 @@ export default function HostelManagement() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => openEdit(h)} className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 transition"><Edit size={15} /></button>
+                      <button onClick={() => openEdit(h)} className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 transition" title="Edit"><Edit size={15} /></button>
+                      <button onClick={() => toggleFeatured(h)} title={h.featured ? "Remove from featured" : "Mark as featured"} className={`p-1.5 rounded-lg transition ${h.featured ? "text-yellow-500 hover:bg-yellow-50" : "text-gray-400 hover:bg-gray-100"}`}>
+                        <Star size={15} fill={h.featured ? "#eab308" : "none"} />
+                      </button>
                       <button onClick={() => toggleBlock(h)} className={`p-1.5 rounded-lg transition ${h.isBlocked ? "text-green-600 hover:bg-green-50" : "text-amber-500 hover:bg-amber-50"}`}>
                         {h.isBlocked ? <CheckCircle size={15} /> : <Ban size={15} />}
                       </button>
@@ -170,6 +184,7 @@ export default function HostelManagement() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => openEdit(h)} className="flex-1 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-semibold">Edit</button>
+              <button onClick={() => toggleFeatured(h)} className={`flex-1 py-2 rounded-lg text-xs font-semibold ${h.featured ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-600"}`}>{h.featured ? "Unfeature" : "Feature"}</button>
               <button onClick={() => toggleBlock(h)} className={`flex-1 py-2 rounded-lg text-xs font-semibold ${h.isBlocked ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>{h.isBlocked ? "Unblock" : "Block"}</button>
               <button onClick={() => deleteHostel(h)} className="flex-1 py-2 rounded-lg bg-red-50 text-red-600 text-xs font-semibold">Delete</button>
             </div>

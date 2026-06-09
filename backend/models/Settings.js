@@ -8,6 +8,9 @@ const SettingsSchema = new mongoose.Schema({
   supportPhone:         { type: String,  default: "" },
   primaryCity:          { type: String,  default: "" },
   featuredHostelLimit:  { type: Number,  default: 6 },
+  reviewsEnabled:       { type: Boolean, default: true },
+  reviewsLimit:         { type: Number,  default: 6 },
+  reviewsSortBy:        { type: String,  enum: ["latest", "highest_rated"], default: "latest" },
 
   // Booking & Payments
   advancePercent:       { type: Number,  default: 30 },

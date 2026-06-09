@@ -4,7 +4,7 @@ import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCog, Building2, CalendarCheck,
-  MessageSquare, X, Settings, ChevronDown, LogOut, FileText,
+  MessageSquare, X, Settings, ChevronDown, LogOut, FileText, Star,
 } from "lucide-react";
 import DashboardHeader from "../DashboardHeader";
 
@@ -15,6 +15,7 @@ const navItems = [
   { label: "Hostel Management",  icon: Building2,       path: "/admin/hostels"   },
   { label: "Booking Management", icon: CalendarCheck,   path: "/admin/bookings"  },
   { label: "Chat Monitoring",    icon: MessageSquare,   path: "/admin/chats"        },
+  { label: "Review Management",  icon: Star,            path: "/admin/reviews"      },
   { label: "Site Content",       icon: FileText,        path: "/admin/site-content" },
   { label: "Settings",           icon: Settings,        path: "/admin/settings"     },
 ];

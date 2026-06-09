@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Hostel } from "../models/Hostel.js";
 import Booking from "../models/Booking.js";
+import Settings from "../models/Settings.js";
 import { geocodeAddress } from "../utils/geocode.js";
 
 
@@ -253,6 +254,7 @@ export const getNearbyHostels = async (req, res) => {
   console.log("🏷 Received category:", req.body.category);
   const { lat, lng, km, category } = req.body;
 
+
   if (!lat || !lng) {
     console.log("❌ Missing coordinates in backend");
     return res.status(400).json({ message: "Coordinates required" });
@@ -304,4 +306,38 @@ export const getNearbyHostels = async (req, res) => {
     console.log(`Hostel: ${h.name}, Distance: ${dist} km`);
   });
      res.json(hostels);
+};
+
+// ── Public: get featured hostels ─────────────────────────────────────────────
+export const getFeaturedHostels = async (req, res) => {
+  try {
+    const settings = await Settings.findOne().lean();
+    const limit = settings?.featuredHostelLimit || 6;
+
+    const hostels = await Hostel.find({ featured: true, isBlocked: false })
+      .sort({ featuredOrder: 1, createdAt: -1 })
+      .limit(limit)
+      .select("name type address startingRent facilities images featuredOrder");
+
+    res.json(hostels);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ── Admin: toggle featured + set order ──────────────────────────────────────
+export const toggleFeatured = async (req, res) => {
+  try {
+    const hostel = await Hostel.findById(req.params.id);
+    if (!hostel) return res.status(404).json({ message: "Hostel not found" });
+
+    const { featured, featuredOrder } = req.body;
+    if (featured !== undefined) hostel.featured = featured;
+    if (featuredOrder !== undefined) hostel.featuredOrder = featuredOrder;
+    await hostel.save();
+
+    res.json({ message: "Hostel featured status updated", hostel });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
