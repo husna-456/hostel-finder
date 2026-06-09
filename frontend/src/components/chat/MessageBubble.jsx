@@ -202,10 +202,108 @@ function ReplyPreview({ replyTo }) {
   );
 }
 
+/* ─── image bubble ──────────────────────────────────────── */
+
+function ImageBubble({ message, isSender }) {
+  const [loaded, setLoaded] = useState(false);
+  const [modal,  setModal]  = useState(false);
+
+  return (
+    <>
+      {/* Outer container: skeleton aspect until image loads */}
+      <div
+        className={clsx(
+          "relative cursor-pointer overflow-hidden rounded-2xl active:opacity-90",
+          !loaded && "aspect-[4/3] bg-gray-200 animate-pulse"
+        )}
+        onClick={() => setModal(true)}
+      >
+        <img
+          src={message.fileUrl}
+          alt={message.fileName || "image"}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          className={clsx(
+            "w-full h-auto block object-cover transition-opacity duration-300",
+            loaded ? "opacity-100" : "opacity-0 absolute inset-0 w-full h-full"
+          )}
+          style={{ maxHeight: "340px" }}
+        />
+
+        {/* Bottom gradient + timestamp — only after image loads */}
+        {loaded && (
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-end gap-1 px-2.5 pb-1.5 pt-8 bg-gradient-to-t from-black/55 to-transparent pointer-events-none">
+            <span className="text-white text-[11px] leading-none drop-shadow-sm tabular-nums">
+              {formatTime(message.createdAt)}
+            </span>
+            {isSender && <Tick status={message.status} white />}
+          </div>
+        )}
+      </div>
+
+      {modal && <MediaModal type="image" src={message.fileUrl} onClose={() => setModal(false)} />}
+    </>
+  );
+}
+
+/* ─── video bubble ──────────────────────────────────────── */
+
+function VideoBubble({ message, isSender }) {
+  const [modal, setModal] = useState(false);
+
+  return (
+    <>
+      <div
+        className="relative cursor-pointer overflow-hidden rounded-2xl active:opacity-90 group/vid"
+        onClick={() => setModal(true)}
+      >
+        {/* Fixed aspect ratio container */}
+        <div className="relative aspect-video bg-gray-900 overflow-hidden">
+          <video
+            src={message.fileUrl}
+            className="w-full h-full object-cover opacity-80"
+            preload="metadata"
+            muted
+            playsInline
+          />
+
+          {/* Subtle dark vignette */}
+          <div className="absolute inset-0 bg-black/20" />
+
+          {/* Play button — scales on hover */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-[52px] h-[52px] rounded-full bg-black/50 border-[2.5px] border-white/90 flex items-center justify-center shadow-xl backdrop-blur-[2px] transition-transform duration-200 group-hover/vid:scale-110 active:scale-90">
+              <Play size={20} className="text-white translate-x-[2px]" fill="white" />
+            </div>
+          </div>
+
+          {/* Bottom gradient — duration left, timestamp right */}
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-2.5 pb-2 pt-10 bg-gradient-to-t from-black/65 to-transparent pointer-events-none">
+            {message.duration ? (
+              <span className="text-white text-[11px] leading-none font-medium tabular-nums">
+                {formatDur(message.duration)}
+              </span>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-1">
+              <span className="text-white text-[11px] leading-none tabular-nums">
+                {formatTime(message.createdAt)}
+              </span>
+              {isSender && <Tick status={message.status} white />}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {modal && <MediaModal type="video" src={message.fileUrl} onClose={() => setModal(false)} />}
+    </>
+  );
+}
+
 /* ─── message content ───────────────────────────────────── */
 
 function MessageContent({ message, isSender, otherUser }) {
-  const [modal, setModal] = useState(null);
   const type = message.type || "text";
 
   if (message.isDeleted) {
@@ -213,43 +311,11 @@ function MessageContent({ message, isSender, otherUser }) {
   }
 
   if (type === "image") {
-    return (
-      <>
-        <div className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden" onClick={() => setModal("image")}>
-          <img src={message.fileUrl} alt={message.fileName || "image"} className="w-full h-auto object-cover" loading="lazy" />
-          <div className="absolute bottom-0 right-0 px-2 py-1 bg-black/40 rounded-tl-xl flex items-center gap-1">
-            <span className="text-white text-[11px] leading-none">{formatTime(message.createdAt)}</span>
-            {isSender && <Tick status={message.status} white />}
-          </div>
-        </div>
-        {modal && <MediaModal type="image" src={message.fileUrl} onClose={() => setModal(null)} />}
-      </>
-    );
+    return <ImageBubble message={message} isSender={isSender} />;
   }
 
   if (type === "video") {
-    return (
-      <>
-        <div className="relative cursor-pointer max-w-[280px] rounded-xl overflow-hidden" onClick={() => setModal("video")}>
-          <video src={message.fileUrl} className="w-full h-48 object-cover" />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="w-14 h-14 rounded-full bg-white/80 flex items-center justify-center">
-              <Play size={24} className="text-gray-800 ml-1" />
-            </div>
-          </div>
-          {message.duration && (
-            <div className="absolute bottom-2 left-2 bg-black/50 rounded px-1.5 py-0.5">
-              <span className="text-white text-[11px] tabular-nums">{formatDur(message.duration)}</span>
-            </div>
-          )}
-          <div className="absolute bottom-2 right-2 flex items-center gap-1">
-            <span className="text-white text-[11px] leading-none">{formatTime(message.createdAt)}</span>
-            {isSender && <Tick status={message.status} white />}
-          </div>
-        </div>
-        {modal && <MediaModal type="video" src={message.fileUrl} onClose={() => setModal(null)} />}
-      </>
-    );
+    return <VideoBubble message={message} isSender={isSender} />;
   }
 
   if (type === "audio") {
@@ -335,7 +401,6 @@ function DeleteModal({ isSender, onDeleteEveryone, onDeleteForMe, onClose }) {
         className="bg-white w-full sm:max-w-xs rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* drag handle on mobile */}
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1 sm:hidden" />
         <div className="px-6 pt-4 pb-3 text-center">
           <h3 className="font-semibold text-gray-900 text-[15px]">Delete message?</h3>
@@ -345,7 +410,6 @@ function DeleteModal({ isSender, onDeleteEveryone, onDeleteForMe, onClose }) {
         </div>
         <div className="border-t border-gray-100" />
 
-        {/* Delete for Everyone — sender only */}
         {isSender && (
           <button
             onClick={onDeleteEveryone}
@@ -355,7 +419,6 @@ function DeleteModal({ isSender, onDeleteEveryone, onDeleteForMe, onClose }) {
           </button>
         )}
 
-        {/* Delete for Me */}
         <button
           onClick={onDeleteForMe}
           className={clsx(
@@ -368,7 +431,6 @@ function DeleteModal({ isSender, onDeleteEveryone, onDeleteForMe, onClose }) {
           Delete for Me
         </button>
 
-        {/* Cancel */}
         <button
           onClick={onClose}
           className="w-full px-6 py-4 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors border-t border-gray-100"
@@ -404,7 +466,6 @@ export default function MessageBubble({
   const reactRef     = useRef(null);
   const longPressRef = useRef(null);
 
-  /* close when parent deselects (scroll, outside click, conv change) */
   useEffect(() => {
     if (!isSelected) {
       setShowMenu(false);
@@ -414,7 +475,6 @@ export default function MessageBubble({
     }
   }, [isSelected]);
 
-  /* outside-click closes menu and reaction picker */
   useEffect(() => {
     if (!showMenu && !showReactions) return;
     const h = (e) => {
@@ -451,7 +511,6 @@ export default function MessageBubble({
     onSelect?.();
   };
 
-  /* long press on mobile → bottom sheet */
   const onTouchStart = () => {
     longPressRef.current = setTimeout(() => { setShowSheet(true); onSelect?.(); }, 500);
   };
@@ -500,7 +559,8 @@ export default function MessageBubble({
   };
 
   const type           = message.type || "text";
-  const hideBottomMeta = !message.isDeleted && (type === "image" || type === "video");
+  const isMedia        = (type === "image" || type === "video") && !message.isDeleted;
+  const hideBottomMeta = isMedia;
   const hasText        = !!message.message && !message.isDeleted;
   const hasMedia       = !!message.fileUrl  && !message.isDeleted;
 
@@ -508,7 +568,7 @@ export default function MessageBubble({
     (r) => r.userId?.toString() === currentUserId || r.userId === currentUserId
   )?.emoji;
 
-  /* ── quick reaction picker (inline absolute) ── */
+  /* ── quick reaction picker ── */
   const reactionPicker = (
     <div className={clsx(
       "absolute bottom-full mb-2 z-50",
@@ -556,7 +616,7 @@ export default function MessageBubble({
     </div>
   );
 
-  /* ── inline action menu (absolute, scrolls with message) ── */
+  /* ── inline action menu ── */
   const actionMenu = showMenu && (
     <div
       ref={menuRef}
@@ -594,7 +654,6 @@ export default function MessageBubble({
 
   return (
     <>
-      {/* Delete modal */}
       {showDeleteModal && (
         <DeleteModal
           isSender={isSender}
@@ -604,7 +663,6 @@ export default function MessageBubble({
         />
       )}
 
-      {/* Full emoji picker */}
       {showEmojiPicker && createPortal(
         <div
           className="fixed inset-0 z-[9998] flex items-end justify-center sm:items-center bg-black/40"
@@ -620,7 +678,6 @@ export default function MessageBubble({
         document.body
       )}
 
-      {/* Mobile bottom sheet */}
       {isSelected && showSheet && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end bg-black/40" onClick={handleClose}>
           <div
@@ -629,7 +686,6 @@ export default function MessageBubble({
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-2" />
 
-            {/* Quick emoji bar */}
             <div className="flex justify-center px-4 pb-3">
               <div className="bg-white rounded-full shadow-lg border border-gray-100 px-2.5 py-1.5 flex items-center gap-0.5">
                 {QUICK_EMOJIS.map((e) => (
@@ -681,11 +737,13 @@ export default function MessageBubble({
       <div className="flex flex-col group">
         <div className={clsx("flex items-end gap-1", isSender ? "justify-end" : "justify-start")}>
 
-          {/* Reaction button — left of bubble for received messages */}
           {!isSender && reactionBtn}
 
-          {/* Bubble + inline menu wrapper */}
-          <div className="relative max-w-[75%]">
+          {/* Bubble + inline menu wrapper — wider for media on mobile */}
+          <div className={clsx(
+            "relative",
+            isMedia ? "max-w-[82%] sm:max-w-[65%] md:max-w-[55%]" : "max-w-[75%]"
+          )}>
 
             {/* The visual bubble */}
             <div
@@ -696,35 +754,41 @@ export default function MessageBubble({
               onContextMenu={(e) => e.preventDefault()}
               className={clsx(
                 "relative w-fit rounded-2xl shadow-sm overflow-hidden transition-all duration-150",
-                (type === "image" || type === "video") && !message.isDeleted ? "" : "px-3 py-1.5",
+                isMedia ? "p-0" : "px-3 py-1.5",
                 isSender ? "bg-[#d9fdd3] rounded-tr-sm" : "bg-white rounded-tl-sm",
                 highlight    && !isCurrentResult && "ring-2 ring-yellow-300",
                 isCurrentResult                  && "ring-2 ring-yellow-500",
                 isSelected                       && "ring-2 ring-purple-200",
               )}
             >
-              {/* ▾ Arrow inside bubble — desktop hover only */}
+              {/* ▾ Arrow button — desktop hover only */}
               <button
                 onClick={toggleMenu}
                 aria-label="Message options"
                 className={clsx(
                   "hidden md:flex absolute top-1 right-1 w-5 h-5 rounded-full z-10",
                   "items-center justify-center transition-opacity",
-                  isSender ? "bg-[#c5f2c2]/80 hover:bg-[#aeecab]" : "bg-gray-200/70 hover:bg-gray-300/80",
+                  isMedia
+                    ? "bg-black/25 hover:bg-black/40"
+                    : isSender
+                      ? "bg-[#c5f2c2]/80 hover:bg-[#aeecab]"
+                      : "bg-gray-200/70 hover:bg-gray-300/80",
                   showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 )}
               >
-                <ChevronDown size={12} className="text-gray-600" />
+                <ChevronDown size={12} className={isMedia ? "text-white" : "text-gray-600"} />
               </button>
 
+              {/* Reply-to preview — inside bubble, padded if media */}
               {message.replyTo && (
-                <div className={clsx((type === "image" || type === "video") ? "px-3 pt-2" : "")}>
+                <div className={clsx(isMedia ? "px-3 pt-2" : "")}>
                   <ReplyPreview replyTo={message.replyTo} />
                 </div>
               )}
 
               <MessageContent message={message} isSender={isSender} otherUser={otherUser} />
 
+              {/* Bottom meta row — only for non-media types */}
               {!hideBottomMeta && (
                 <div className="flex items-center justify-end gap-1 mt-0.5">
                   <span className="text-[11px] text-gray-500 leading-none select-none">
@@ -735,14 +799,10 @@ export default function MessageBubble({
               )}
             </div>
 
-            {/* Inline action dropdown — scrolls with the message */}
             {actionMenu}
-
           </div>
 
-          {/* Reaction button — right of bubble for sent messages */}
           {isSender && reactionBtn}
-
         </div>
 
         {/* Reactions row below bubble */}

@@ -67,3 +67,12 @@
 .menu-popup {
   animation: menuPopIn 0.12s ease-out forwards;
 }
+
+/* Media bubble fade-in */
+@keyframes mediaFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+.media-fade-in {
+  animation: mediaFadeIn 0.2s ease-out forwards;
+}
