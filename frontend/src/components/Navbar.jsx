@@ -13,7 +13,6 @@ const NAV_LINKS = [
   { to: "/advanced-search", label: "Advanced Search" },
   { to: "/faqs", label: "FAQs" },
   { to: "/contact", label: "Contact" },
-  { to: "/privacy-policy", label: "Privacy" },
 ];
 
 export default function Navbar() {
