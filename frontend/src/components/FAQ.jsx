@@ -239,9 +239,8 @@ export default function FAQs() {
           <span className="text-[12px] text-gray-400 ml-3">© 2024 HostelFinder</span>
         </div>
         <div className="flex gap-4 md:gap-6 flex-wrap">
-          {["Privacy Policy", "Terms of Service", "Help Center"].map((l) => (
-            <a key={l} href="#" className="text-[12px] text-gray-500 hover:text-purple-600">{l}</a>
-          ))}
+          <Link to="/privacy-policy" className="text-[12px] text-gray-500 hover:text-purple-600">Privacy Policy</Link>
+          <Link to="/terms-of-service" className="text-[12px] text-gray-500 hover:text-purple-600">Terms of Service</Link>
         </div>
       </footer>
     </div>

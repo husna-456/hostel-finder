@@ -70,6 +70,8 @@ import HostelDetails from "./pages/HostelDetails";
 import AdvancedSearch from "./pages/AdvancedSearch";
 import FAQs from "./components/FAQ";
 import ContactUs from "./components/Contactus";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 
 // ✅ PrivateRoute Component
@@ -147,6 +149,8 @@ function App() {
           <Route path="/hostels/:id" element={<HostelDetails />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/advanced-search" element={<AdvancedSearch />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/book-hostel" element={<BookHostel />} />
           <Route path="/book-hostel/:id" element={<BookHostel />} />
 
