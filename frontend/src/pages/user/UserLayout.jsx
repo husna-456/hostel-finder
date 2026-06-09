@@ -1,34 +1,39 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import UserSidebar from "./UserSidebar";
-import { FaBars } from "react-icons/fa";
+import DashboardHeader from "../../components/DashboardHeader";
+
+const titleMap = {
+  "/user/dashboard":      "Dashboard",
+  "/user/hostel-listing": "Hostel Listing",
+  "/user/book-hostel":    "Book a Hostel",
+  "/user/my-bookings":    "My Bookings",
+  "/user/payments":       "Payments",
+  "/user/chat":           "Messages",
+  "/user/profile":        "My Profile",
+};
 
 export default function UserLayout() {
   const location = useLocation();
   const isChatPage = location.pathname.endsWith("/chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const title = Object.entries(titleMap).find(
+    ([path]) => location.pathname === path || location.pathname.startsWith(path + "/")
+  )?.[1] || "User Panel";
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <UserSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-
-      {/* Content — on mobile no margin (sidebar is overlay); on desktop shift right */}
-      <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-          sidebarOpen ? "md:ml-60" : "md:ml-16"
-        }`}
-      >
-        {/* Mobile top bar with hamburger — hidden on chat page */}
-        <div className={`md:hidden flex items-center gap-3 bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-30 ${isChatPage ? "hidden" : ""}`}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
-          >
-            <FaBars className="text-xl" />
-          </button>
-          <span className="text-base font-bold text-purple-600">User Panel</span>
-        </div>
-
+      <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${sidebarOpen ? "md:ml-60" : "md:ml-16"}`}>
+        {!isChatPage && (
+          <DashboardHeader
+            title={title}
+            onMenuClick={() => setSidebarOpen(p => !p)}
+            profilePath="/user/profile"
+            logoutPath="/"
+          />
+        )}
         <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto ${isChatPage ? "" : "p-4 md:p-6"}`}>
           <Outlet />
         </main>
