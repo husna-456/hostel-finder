@@ -72,7 +72,7 @@ export const deleteReview = async (req, res) => {
 export const getApprovedReviews = async (req, res) => {
   try {
     const settings = await Settings.findOne().lean();
-    if (settings && !settings.reviewsEnabled) return res.json([]);
+    if (settings && settings.reviewsEnabled === false) return res.json([]);
 
     const limit = settings?.reviewsLimit || 6;
     const sortBy = settings?.reviewsSortBy || "latest";
