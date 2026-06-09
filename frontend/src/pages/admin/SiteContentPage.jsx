@@ -275,10 +275,15 @@ export default function SiteContentPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetchClient(`/admin/site-content/${activeTab}`, { method: "PUT", body: JSON.stringify(data) });
-      toast.success("Content saved successfully");
+      const saved = await fetchClient(`/admin/site-content/${activeTab}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      // Reload from the confirmed saved value so admin sees exactly what's stored
+      setData(saved);
+      toast.success("Content saved and published");
     } catch {
-      toast.error("Failed to save");
+      toast.error("Failed to save — check your connection and try again");
     } finally {
       setSaving(false);
     }

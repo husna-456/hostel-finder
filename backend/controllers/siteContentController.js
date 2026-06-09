@@ -79,9 +79,11 @@ export const getPublicSiteContent = async (req, res) => {
     return res.status(400).json({ message: "Invalid section" });
 
   try {
-    const doc = await SiteContent.findOne({ section });
+    // .lean() returns a plain JS object — avoids Mixed-type serialisation quirks
+    const doc = await SiteContent.findOne({ section }).lean();
     res.json(doc?.data ?? DEFAULTS[section]);
-  } catch {
+  } catch (err) {
+    console.error("getPublicSiteContent error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -92,13 +94,20 @@ export const updateSiteContent = async (req, res) => {
     return res.status(400).json({ message: "Invalid section" });
 
   try {
-    const doc = await SiteContent.findOneAndUpdate(
-      { section },
-      { $set: { data: req.body } },
-      { upsert: true, new: true }
-    );
-    res.json(doc.data);
-  } catch {
+    let doc = await SiteContent.findOne({ section });
+    if (doc) {
+      doc.data = req.body;
+      doc.markModified("data"); // required: Mongoose won't auto-detect Mixed changes
+      await doc.save();
+    } else {
+      doc = new SiteContent({ section, data: req.body });
+      await doc.save();
+    }
+    // Re-read with .lean() to confirm what's actually stored
+    const saved = await SiteContent.findOne({ section }).lean();
+    res.json(saved.data);
+  } catch (err) {
+    console.error("updateSiteContent error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

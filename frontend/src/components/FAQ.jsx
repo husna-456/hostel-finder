@@ -93,9 +93,9 @@ export default function FAQs() {
   useEffect(() => {
     const BASE = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
     fetch(`${BASE}/site-content/facts`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((d) => { if (d?.stats) setContent(d); })
-      .catch(() => {});
+      .catch(() => {/* fallback to DEFAULT already in state */});
   }, []);
 
   const { hero, stats, achievements } = content;
