@@ -7,7 +7,7 @@
 import User         from "../models/User.js";
 import Notification from "../models/Notification.js";
 import transporter  from "../config/nodemailer.js";
-import { renderEmail } from "../email/layout.js";
+import { renderEmail, renderTextEmail } from "../email/layout.js";
 import { TEMPLATES }   from "../email/templates.js";
 import { enqueue }     from "./emailQueue.js";
 
@@ -36,13 +36,12 @@ const isEnabled = (user, type) => {
 const deliver = async (receiverEmail, type, data) => {
   const templateFn = TEMPLATES[type];
   if (!templateFn) {
-    // Throw so the queue logs this as a real failure
     throw new Error(`No email template registered for notification type: "${type}"`);
   }
   const payload = templateFn(data);
   const html    = renderEmail(payload);
-  // sendMail now throws on Mailjet failure — error propagates to queue try/catch
-  await transporter.sendMail({ to: receiverEmail, subject: payload.subject, html });
+  const text    = renderTextEmail(payload); // plain-text companion — required for inbox delivery
+  await transporter.sendMail({ to: receiverEmail, subject: payload.subject, html, text });
 };
 
 // ── Anti-spam cooldown for messages ──────────────────────────────────────────

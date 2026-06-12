@@ -46,14 +46,14 @@ export const TEMPLATES = {
 
   // Guest receives: owner accepted their booking
   BOOKING_ACCEPTED: (d) => ({
-    subject:   `Booking Accepted — ${d.hostelName} \u{1F389}`,
+    subject:   `Booking Accepted — ${d.hostelName}`,
     preheader: `Great news! Your booking at ${d.hostelName} was accepted`,
     heading:   "Your Booking Was Accepted!",
     greeting:  `Hi ${d.userName}`,
     body:      `The owner has <strong style="color:#10b981;">accepted</strong> your booking request for <strong>${d.hostelName}</strong>. Complete your payment to officially reserve your seat.`,
     details: [
       { label: "Hostel", value: d.hostelName },
-      { label: "Status", value: "Accepted ✅" },
+      { label: "Status", value: "Accepted" },
     ],
     cta:  { text: "Proceed to Payment", href: `${BASE_URL}/user/my-bookings` },
     note: "Complete your payment promptly to secure your spot before it is taken by someone else.",
@@ -109,7 +109,7 @@ export const TEMPLATES = {
 
   // Guest receives: payment verified, seat is confirmed
   PAYMENT_VERIFIED: (d) => ({
-    subject:   `Seat Confirmed — ${d.hostelName} ✅`,
+    subject:   `Seat Confirmed — ${d.hostelName}`,
     preheader: `Your seat at ${d.hostelName} is now officially reserved`,
     heading:   "Your Seat is Reserved!",
     greeting:  `Hi ${d.userName}`,
@@ -118,7 +118,7 @@ export const TEMPLATES = {
       { label: "Hostel",      value: d.hostelName },
       { label: "Amount Paid", value: fmt(d.amount) },
       { label: "Method",      value: d.method || "—" },
-      { label: "Status",      value: "Confirmed ✅" },
+      { label: "Status",      value: "Confirmed" },
     ],
     cta:  { text: "View My Booking", href: `${BASE_URL}/user/my-bookings` },
     note: "Welcome to your new hostel! Contact us if you have any questions.",
@@ -135,7 +135,7 @@ export const TEMPLATES = {
       : `Your payment for <strong>${d.hostelName}</strong> could not be verified at this time.`,
     details: [
       { label: "Hostel", value: d.hostelName },
-      { label: "Status", value: "Rejected ❌" },
+      { label: "Status", value: "Rejected" },
     ],
     cta:  { text: "Re-Upload Receipt", href: `${BASE_URL}/user/my-bookings` },
     note: "Please re-upload a clear, valid payment receipt. Contact us if you need assistance.",

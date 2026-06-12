@@ -1,24 +1,24 @@
 // backend/email/layout.js
-// Single source of HTML for all emails.
+// Single source of HTML and plain-text rendering for all emails.
 // Templates pass structured data objects — this file owns all markup.
 
 const BRAND_NAME    = "Hostel Finder";
 const BRAND_TAGLINE = "Your trusted hostel marketplace";
 const SUPPORT_EMAIL = process.env.EMAIL || "support@hostelfinder.com";
 
-// ── Detail row ────────────────────────────────────────────────────────────────
+// ── HTML helpers ──────────────────────────────────────────────────────────────
+
 const renderDetailRow = ({ label, value }) => `
   <tr>
     <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;vertical-align:top;">
       <span style="display:inline-block;min-width:130px;font-size:13px;
                    color:#64748b;font-weight:500;">${label}</span>
       <span style="font-size:13px;color:#1e293b;font-weight:600;">
-        ${value != null && value !== "" ? String(value) : "—"}
+        ${value != null && value !== "" ? String(value) : "&mdash;"}
       </span>
     </td>
   </tr>`;
 
-// ── Detail table ──────────────────────────────────────────────────────────────
 const renderDetails = (details) => {
   if (!details?.length) return "";
   return `
@@ -29,7 +29,6 @@ const renderDetails = (details) => {
   </table>`;
 };
 
-// ── CTA button ────────────────────────────────────────────────────────────────
 const renderCta = (cta) => {
   if (!cta?.text || !cta?.href) return "";
   return `
@@ -48,13 +47,12 @@ const renderCta = (cta) => {
   </table>`;
 };
 
-// ── Note line ─────────────────────────────────────────────────────────────────
 const renderNote = (note) => {
   if (!note) return "";
   return `<p style="margin:16px 0 0;font-size:13px;color:#64748b;line-height:1.6;">${note}</p>`;
 };
 
-// ── Main layout ───────────────────────────────────────────────────────────────
+// ── HTML layout ───────────────────────────────────────────────────────────────
 export const renderEmail = ({ subject, preheader = "", greeting, heading, body, details, cta, note }) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -95,24 +93,19 @@ export const renderEmail = ({ subject, preheader = "", greeting, heading, body, 
         <tr>
           <td style="background:#ffffff;padding:36px;
                      border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
-
             <h2 style="margin:0 0 20px;font-size:21px;font-weight:700;
                        color:#0f172a;line-height:1.3;">
               ${heading}
             </h2>
-
             <p style="margin:0 0 12px;font-size:15px;color:#374151;line-height:1.7;">
               ${greeting},
             </p>
-
             <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">
               ${body}
             </p>
-
             ${renderDetails(details)}
             ${renderNote(note)}
             ${renderCta(cta)}
-
           </td>
         </tr>
 
@@ -146,3 +139,62 @@ export const renderEmail = ({ subject, preheader = "", greeting, heading, body, 
   </table>
 </body>
 </html>`;
+
+// ── Plain-text layout ─────────────────────────────────────────────────────────
+// Spam filters heavily penalise HTML-only messages.
+// This generates a clean text companion sent as TextPart alongside HTMLPart.
+
+const stripHtml = (html = "") =>
+  html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/h[1-6]>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&rarr;/g, "->")
+    .replace(/&mdash;/g, "-")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#8204;/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const HR = "-".repeat(48);
+
+export const renderTextEmail = ({ heading, greeting, body, details, cta, note }) => {
+  const lines = [
+    BRAND_NAME.toUpperCase(),
+    HR,
+    "",
+    heading,
+    "",
+    `${greeting},`,
+    "",
+    stripHtml(body),
+  ];
+
+  if (details?.filter((d) => d.value != null && d.value !== "").length) {
+    lines.push("", HR);
+    details.forEach(({ label, value }) => {
+      if (value != null && value !== "") lines.push(`${label}: ${value}`);
+    });
+  }
+
+  if (note) lines.push("", stripHtml(note));
+
+  if (cta?.text && cta?.href) {
+    lines.push("", `${cta.text}:`, cta.href);
+  }
+
+  lines.push(
+    "",
+    HR,
+    `Support: ${SUPPORT_EMAIL}`,
+    `(c) ${new Date().getFullYear()} ${BRAND_NAME}`,
+    "You received this because an action occurred on your account.",
+  );
+
+  return lines.join("\n");
+};
