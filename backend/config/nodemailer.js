@@ -1,76 +1,62 @@
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-dotenv.config();
+import { Resend } from "resend";
 
-// Mailjet HTTP API transporter
-// sendMail now accepts both html (HTMLPart) and text (TextPart).
-// Including a plain-text part is required for good spam scoring —
-// HTML-only emails are flagged by most filters.
+// ── Resend client ─────────────────────────────────────────────────────────────
+// Resend handles SPF / DKIM / DMARC automatically for verified domains.
+// Domain verification is done once in the Resend dashboard (resend.com).
+// Once verified, all emails sent through this client are fully authenticated.
+
+let client = null;
+
+const getClient = () => {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error(
+      "RESEND_API_KEY is not set. Add it to Railway environment variables."
+    );
+  }
+  if (!client) client = new Resend(process.env.RESEND_API_KEY);
+  return client;
+};
+
+// ── sendMail — same interface as before, drop-in replacement ──────────────────
+// { to, subject, html, text }
+// Nothing above this (emailService, emailQueue, etc.) needs to change.
 const transporter = {
   sendMail: async ({ to, subject, html, text }) => {
-    if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
-      const err = new Error("Mailjet keys not configured (MAILJET_API_KEY / MAILJET_SECRET_KEY missing)");
-      console.error("❌ [nodemailer]", err.message);
-      throw err;
-    }
+    const resend = getClient();
 
-    const fromEmail = process.env.EMAIL || "husnazaheer518@gmail.com";
-    const toAddress =
-      typeof to === "string" ? [{ Email: to }] : to.map((e) => ({ Email: e }));
+    // EMAIL_FROM must be a verified sender in Resend (your domain).
+    // During testing you can use: onboarding@resend.dev
+    // For production set: noreply@yourdomain.com
+    const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    const replyTo   = process.env.EMAIL      || fromEmail;
 
-    const body = JSON.stringify({
-      Messages: [
-        {
-          From:    { Email: fromEmail, Name: "Hostel Finder" },
-          ReplyTo: { Email: fromEmail },
-          To: toAddress,
-          Subject: subject,
-          HTMLPart: html,
-          // Plain-text fallback: spam filters penalise HTML-only messages.
-          // This is the single biggest code-level deliverability improvement.
-          TextPart: text || "",
-          // List-Unsubscribe: Gmail uses this to classify the sender as
-          // "transactional" rather than "bulk spam". Its absence lowers trust.
-          Headers: {
-            "List-Unsubscribe": `<mailto:${fromEmail}?subject=unsubscribe>`,
-          },
-          // CustomID lets Mailjet track this campaign in their dashboard
-          // (NOT a reserved header — unlike the X-Mailjet-Campaign that failed).
-          CustomID: "hostel-finder-transactional",
-        },
-      ],
+    const toList = typeof to === "string" ? [to] : to;
+
+    console.log(`[mailer] → Sending "${subject}" to ${to} (from: ${fromEmail})`);
+
+    const { data, error } = await resend.emails.send({
+      from:     `Hostel Finder <${fromEmail}>`,
+      to:       toList,
+      reply_to: replyTo,
+      subject,
+      html,
+      text,   // plain-text companion — required for good spam scoring
     });
 
-    console.log(`[nodemailer] → Sending "${subject}" to ${to}`);
-
-    const res = await fetch("https://api.mailjet.com/v3.1/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:
-          "Basic " +
-          Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString("base64"),
-      },
-      body,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || data.Messages?.[0]?.Status !== "success") {
-      const detail = JSON.stringify(data);
-      const err = new Error(`Mailjet API rejected: ${detail}`);
-      console.error(`❌ [nodemailer] Delivery failed to ${to}:`, detail);
-      throw err;
+    if (error) {
+      console.error(`❌ [mailer] Resend rejected delivery to ${to}:`, error);
+      throw new Error(`Resend error: ${JSON.stringify(error)}`);
     }
 
-    console.log(`✅ [nodemailer] Delivered "${subject}" → ${to}`);
+    console.log(`✅ [mailer] Delivered "${subject}" → ${to} (id: ${data?.id})`);
+    return data;
   },
 };
 
 console.log(
-  process.env.MAILJET_API_KEY
-    ? "✅ [nodemailer] Mailjet ready"
-    : "⚠️  [nodemailer] Mailjet keys missing — emails will throw on send"
+  process.env.RESEND_API_KEY
+    ? `✅ [mailer] Resend ready — from: ${process.env.EMAIL_FROM || "onboarding@resend.dev (test mode)"}`
+    : "⚠️  [mailer] RESEND_API_KEY missing — emails will throw on send"
 );
 
 export default transporter;
