@@ -1,42 +1,52 @@
 import Notification from "../models/Notification.js";
-import { getIO } from "./socket.service.js";
+import { getIO }    from "./socket.service.js";
+import { scheduleEmail, scheduleMessageEmail } from "./emailService.js";
 
-// ── Templates ──────────────────────────────────────────────────────────────────
-// Each template defines getTitle, getMessage, and getLink from a `data` payload.
+// ── In-app notification templates ─────────────────────────────────────────────
 const TEMPLATES = {
+  BOOKING_RECEIVED: {
+    getTitle:   ()  => "Booking Request Sent",
+    getMessage: (d) => `Your booking request for ${d.hostelName} has been received`,
+    getLink:    ()  => "/user/my-bookings",
+  },
   BOOKING_REQUEST: {
-    getTitle:   ()     => "New Booking Request",
-    getMessage: (d)    => `${d.guestName} requested to book ${d.hostelName}`,
-    getLink:    ()     => "/hostel_owner/bookings",
+    getTitle:   ()  => "New Booking Request",
+    getMessage: (d) => `${d.guestName} requested to book ${d.hostelName}`,
+    getLink:    ()  => "/hostel_owner/bookings",
   },
   BOOKING_ACCEPTED: {
-    getTitle:   ()     => "Booking Accepted",
-    getMessage: (d)    => `Your booking at ${d.hostelName} has been accepted`,
-    getLink:    ()     => "/user/my-bookings",
+    getTitle:   ()  => "Booking Accepted",
+    getMessage: (d) => `Your booking at ${d.hostelName} has been accepted`,
+    getLink:    ()  => "/user/my-bookings",
   },
   BOOKING_REJECTED: {
-    getTitle:   ()     => "Booking Rejected",
-    getMessage: (d)    => `Your booking at ${d.hostelName} was rejected`,
-    getLink:    ()     => "/user/my-bookings",
+    getTitle:   ()  => "Booking Rejected",
+    getMessage: (d) => `Your booking at ${d.hostelName} was rejected`,
+    getLink:    ()  => "/user/my-bookings",
+  },
+  PAYMENT_RECEIVED: {
+    getTitle:   ()  => "Payment Received",
+    getMessage: (d) => `Your card payment for ${d.hostelName} has been received`,
+    getLink:    ()  => "/user/my-bookings",
   },
   PAYMENT_SUBMITTED: {
-    getTitle:   ()     => "Payment Receipt Submitted",
-    getMessage: (d)    => `A student submitted a ${d.method || "manual"} receipt for ${d.hostelName}`,
-    getLink:    ()     => "/hostel_owner/bookings",
+    getTitle:   ()  => "Payment Receipt Submitted",
+    getMessage: (d) => `A student submitted a ${d.method || "manual"} receipt for ${d.hostelName}`,
+    getLink:    ()  => "/hostel_owner/bookings",
   },
   PAYMENT_VERIFIED: {
-    getTitle:   ()     => "Seat Reserved",
-    getMessage: (d)    => `Your payment for ${d.hostelName} is verified. Your seat is reserved!`,
-    getLink:    ()     => "/user/my-bookings",
+    getTitle:   ()  => "Seat Reserved",
+    getMessage: (d) => `Your payment for ${d.hostelName} is verified. Your seat is reserved!`,
+    getLink:    ()  => "/user/my-bookings",
   },
   PAYMENT_REJECTED: {
-    getTitle:   ()     => "Payment Rejected",
-    getMessage: (d)    => `Your payment for ${d.hostelName} was rejected. Please re-upload your receipt.`,
-    getLink:    ()     => "/user/my-bookings",
+    getTitle:   ()  => "Payment Rejected",
+    getMessage: (d) => `Your payment for ${d.hostelName} was rejected. Please re-upload your receipt.`,
+    getLink:    ()  => "/user/my-bookings",
   },
 };
 
-// ── Emit helper ────────────────────────────────────────────────────────────────
+// ── Socket emit helper ────────────────────────────────────────────────────────
 const emit = (receiverId, notification, extra = {}) => {
   try {
     getIO().to(receiverId.toString()).emit("notification:new", {
@@ -48,7 +58,8 @@ const emit = (receiverId, notification, extra = {}) => {
   }
 };
 
-// ── notify() — standard single notification ────────────────────────────────────
+// ── notify() — standard single notification ───────────────────────────────────
+// Saves to DB, emits via Socket.io, then queues an email asynchronously.
 export const notify = async ({ type, receiverId, senderId = null, entityId = null, metadata = {}, data = {} }) => {
   try {
     const tpl = TEMPLATES[type];
@@ -66,22 +77,27 @@ export const notify = async ({ type, receiverId, senderId = null, entityId = nul
     });
 
     emit(receiverId, notification, { isNew: true });
+
+    // Queue email — non-blocking, never delays API response
+    scheduleEmail(type, receiverId, data);
+
     return notification;
   } catch (err) {
     console.error("notificationService.notify error:", err.message);
   }
 };
 
-// ── notifyNewMessage() — anti-spam aggregated chat notification ─────────────────
-// Rule: one document per (receiver, conversation, unread).
-// If one already exists, increment its count; otherwise create new.
+// ── notifyNewMessage() — anti-spam aggregated chat notification ───────────────
+// One document per (receiver, conversation, unread).
+// Increments count on repeat; creates new on first message.
+// Email is only sent when user is offline and cooldown has expired.
 export const notifyNewMessage = async ({ receiverId, senderId, conversationId, senderName, link }) => {
   try {
     const existing = await Notification.findOne({
       receiverId,
-      type: "NEW_MESSAGE",
+      type:    "NEW_MESSAGE",
       entityId: conversationId,
-      isRead: false,
+      isRead:  false,
     });
 
     let notification;
@@ -109,13 +125,17 @@ export const notifyNewMessage = async ({ receiverId, senderId, conversationId, s
     }
 
     emit(receiverId, notification, { isNew });
+
+    // Queue anti-spam email — checks online status and cooldown internally
+    scheduleMessageEmail(receiverId, senderName, notification);
+
     return notification;
   } catch (err) {
     console.error("notifyNewMessage error:", err.message);
   }
 };
 
-// ── clearChatNotifications() — called when user opens a conversation ────────────
+// ── clearChatNotifications() — called when user opens a conversation ──────────
 export const clearChatNotifications = async ({ receiverId, conversationId }) => {
   try {
     await Notification.updateMany(

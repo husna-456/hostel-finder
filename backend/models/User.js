@@ -48,7 +48,12 @@ const userSchema = new mongoose.Schema({
         default: null
     },
     resetPasswordToken: String,
-    resetPasswordExpire: Date
+    resetPasswordExpire: Date,
+    emailNotifications: {
+        bookings: { type: Boolean, default: true },
+        payments: { type: Boolean, default: true },
+        messages: { type: Boolean, default: true },
+    },
 }, {
     timestamps: true
 });

@@ -3,8 +3,6 @@ const { Types: { ObjectId } } = mongoose;
 import Booking from "../models/Booking.js";
 import Payment from "../models/Payment.js";
 import { Hostel } from "../models/Hostel.js";
-import User from "../models/User.js";
-import transporter from "../config/nodemailer.js";
 import { notify } from "../services/notificationService.js";
 
 // --------------------------------
@@ -39,58 +37,24 @@ export const createBooking = async (req, res) => {
       .populate("userId", "name email");
 
     const hostelName = populated.hostelId?.name || "your hostel";
+    const ownerId    = populated.hostelId?.ownerId;
 
-    // Fire-and-forget: email user (booking received)
-    try {
-      transporter.sendMail({
-        to: email,
-        subject: `Booking Received — ${hostelName}`,
-        html: `
-          <h2>Booking Request Received</h2>
-          <p>Hi ${name},</p>
-          <p>Your booking request for <strong>${hostelName}</strong> has been received and is currently <strong>pending review</strong>.</p>
-          <ul>
-            <li>People: ${people}</li>
-            <li>Room Type: ${roomType || "N/A"}</li>
-            <li>Status: Pending</li>
-          </ul>
-          <p>We'll notify you as soon as the owner responds.</p>
-        `
-      });
-    } catch (_) {}
+    // Confirm to guest that their request was received (in-app + email)
+    notify({
+      type:       "BOOKING_RECEIVED",
+      receiverId: userId,
+      entityId:   savedBooking._id,
+      data:       { hostelName, people, roomType: roomType || "Any" },
+    }).catch(() => {});
 
-    // Fire-and-forget: email owner (new booking request)
-    try {
-      const owner = await User.findById(populated.hostelId?.ownerId).select("email name");
-      if (owner?.email) {
-        transporter.sendMail({
-          to: owner.email,
-          subject: `New Booking Request — ${hostelName}`,
-          html: `
-            <h2>New Booking Request</h2>
-            <p>A student has requested to book <strong>${hostelName}</strong>.</p>
-            <ul>
-              <li>Guest Name: ${name}</li>
-              <li>Email: ${email}</li>
-              <li>Contact: ${contactNo}</li>
-              <li>People: ${people}</li>
-              <li>Room Type: ${roomType || "N/A"}</li>
-            </ul>
-            <p>Please review and respond in your dashboard.</p>
-          `
-        });
-      }
-    } catch (_) {}
-
-    // Notify hostel owner of new booking request
-    const ownerId = populated.hostelId?.ownerId;
+    // Notify owner of new booking request (in-app + email)
     if (ownerId) {
       notify({
         type:       "BOOKING_REQUEST",
         receiverId: ownerId,
         senderId:   userId,
         entityId:   savedBooking._id,
-        data:       { guestName: name, hostelName },
+        data:       { guestName: name, hostelName, people, roomType: roomType || "Any", contactNo },
       }).catch(() => {});
     }
 

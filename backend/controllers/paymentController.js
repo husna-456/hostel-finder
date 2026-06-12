@@ -2,8 +2,6 @@ import Stripe from "stripe";
 import Payment from "../models/Payment.js";
 import Booking from "../models/Booking.js";
 import { Hostel } from "../models/Hostel.js";
-import User from "../models/User.js";
-import transporter from "../config/nodemailer.js";
 import { getOrCreate as getSettings } from "./settingsController.js";
 import { notify } from "../services/notificationService.js";
 
@@ -316,34 +314,27 @@ export const stripeWebhook = async (req, res) => {
           booking.paymentStatus = "paid";
           await booking.save();
 
-          try {
-            const hostel = await Hostel.findById(booking.hostelId).select("name ownerId");
-            const owner  = await User.findById(hostel?.ownerId).select("email");
-            const guest  = await User.findById(booking.userId).select("email name");
+          const hostel = await Hostel.findById(booking.hostelId).select("name ownerId");
 
-            if (owner?.email) transporter.sendMail({
-              to: owner.email,
-              subject: `Card Payment Received — ${hostel?.name}`,
-              html: `<h2>Student Paid via Card</h2><p>A student paid the advance for <strong>${hostel?.name}</strong>. Please verify and confirm their seat in your Bookings dashboard.</p>`
-            });
+          // Notify owner: payment received, review required (in-app + email)
+          if (hostel?.ownerId) {
+            notify({
+              type:       "PAYMENT_SUBMITTED",
+              receiverId: hostel.ownerId,
+              senderId:   booking.userId,
+              entityId:   payment._id,
+              data:       { hostelName: hostel.name, method: "stripe", amount: payment.amount },
+            }).catch(() => {});
+          }
 
-            if (guest?.email) transporter.sendMail({
-              to: guest.email,
-              subject: `Payment Received — ${hostel?.name}`,
-              html: `<h2>Payment Received!</h2><p>Hi ${guest.name},</p><p>Your card payment for <strong>${hostel?.name}</strong> has been received. The owner will confirm your seat shortly.</p>`
-            });
-
-            // In-app: notify owner that card payment was received
-            if (hostel?.ownerId) {
-              notify({
-                type:       "PAYMENT_SUBMITTED",
-                receiverId: hostel.ownerId,
-                senderId:   booking.userId,
-                entityId:   payment._id,
-                data:       { hostelName: hostel.name, method: "stripe" },
-              }).catch(() => {});
-            }
-          } catch (_) {}
+          // Notify guest: card payment processed, awaiting owner confirmation (in-app + email)
+          notify({
+            type:       "PAYMENT_RECEIVED",
+            receiverId: booking.userId,
+            senderId:   hostel?.ownerId ?? null,
+            entityId:   payment._id,
+            data:       { hostelName: hostel?.name || "your hostel", amount: payment.amount },
+          }).catch(() => {});
         }
       }
       console.log("Webhook: payment marked paid", paymentId);
@@ -418,29 +409,13 @@ export const manualPayment = async (req, res) => {
     booking.paymentStatus = "pending_verification";
     await booking.save();
 
-    // Fire-and-forget: email owner to verify the receipt
-    try {
-      const owner = await User.findById(hostel.ownerId).select("email");
-      if (owner?.email) {
-        transporter.sendMail({
-          to: owner.email,
-          subject: `Payment Receipt Submitted — ${hostel.name}`,
-          html: `
-            <h2>Payment Receipt Awaiting Verification</h2>
-            <p>A student has submitted a <strong>${method}</strong> payment receipt for <strong>${hostel.name}</strong>.</p>
-            <p>Please verify the receipt in your dashboard to reserve their seat.</p>
-          `
-        });
-      }
-    } catch (_) {}
-
-    // Notify owner that a payment receipt was submitted
+    // Notify owner that a manual receipt was submitted (in-app + email)
     notify({
       type:       "PAYMENT_SUBMITTED",
       receiverId: hostel.ownerId,
       senderId:   booking.userId,
       entityId:   payment._id,
-      data:       { hostelName: hostel.name, method },
+      data:       { hostelName: hostel.name, method, amount: amount || 0 },
     }).catch(() => {});
 
     res.status(201).json({
@@ -522,31 +497,7 @@ export const verifyPayment = async (req, res) => {
     // Reserve seat
     await reserveSeat(payment.hostelId, payment.roomId);
 
-    // Fire-and-forget: email user that their seat is reserved
-    try {
-      const userEmail = booking?.userId?.email;
-      const userName = booking?.userId?.name;
-      const hostelName = booking?.hostelId?.name;
-      if (userEmail) {
-        transporter.sendMail({
-          to: userEmail,
-          subject: `Seat Reserved — ${hostelName}`,
-          html: `
-            <h2>Your Seat is Reserved!</h2>
-            <p>Hi ${userName},</p>
-            <p>Great news! Your payment has been verified and your seat at <strong>${hostelName}</strong> is now <strong>reserved</strong>.</p>
-            <ul>
-              <li>Amount Paid: PKR ${payment.amount?.toLocaleString() || "—"}</li>
-              <li>Method: ${payment.method}</li>
-              <li>Status: Confirmed</li>
-            </ul>
-            <p>Welcome to your new hostel!</p>
-          `
-        });
-      }
-    } catch (_) {}
-
-    // Notify student that their payment is verified and seat is reserved
+    // Notify student: payment verified, seat reserved (in-app + email)
     const studentId  = booking?.userId?._id;
     const hostelName = booking?.hostelId?.name || "your hostel";
     if (studentId) {
@@ -555,7 +506,7 @@ export const verifyPayment = async (req, res) => {
         receiverId: studentId,
         senderId:   req.user._id,
         entityId:   payment._id,
-        data:       { hostelName },
+        data:       { hostelName, amount: payment.amount, method: payment.method },
       }).catch(() => {});
     }
 
@@ -598,7 +549,7 @@ export const rejectPayment = async (req, res) => {
       booking.paymentStatus = "rejected";
       await booking.save();
 
-      // Notify student that their payment was rejected
+      // Notify student: payment rejected (in-app + email with rejection reason)
       const studentId = booking.userId?._id;
       if (studentId) {
         notify({
@@ -606,7 +557,7 @@ export const rejectPayment = async (req, res) => {
           receiverId: studentId,
           senderId:   req.user._id,
           entityId:   payment._id,
-          data:       { hostelName: booking.hostelId?.name || "your hostel" },
+          data:       { hostelName: booking.hostelId?.name || "your hostel", rejectionReason: rejectReason },
         }).catch(() => {});
       }
     }

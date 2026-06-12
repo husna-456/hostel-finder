@@ -1,13 +1,15 @@
 import mongoose from "mongoose";
 
 export const NOTIFICATION_TYPES = [
-  "BOOKING_REQUEST",
-  "BOOKING_ACCEPTED",
-  "BOOKING_REJECTED",
+  "BOOKING_RECEIVED",   // guest: booking request was submitted
+  "BOOKING_REQUEST",    // owner: new booking request arrived
+  "BOOKING_ACCEPTED",   // guest: owner accepted their booking
+  "BOOKING_REJECTED",   // guest: owner rejected their booking
   "NEW_MESSAGE",
-  "PAYMENT_SUBMITTED",
-  "PAYMENT_VERIFIED",
-  "PAYMENT_REJECTED",
+  "PAYMENT_RECEIVED",   // guest: card payment processed (pre-verification)
+  "PAYMENT_SUBMITTED",  // owner: manual/card receipt needs review
+  "PAYMENT_VERIFIED",   // guest: seat confirmed
+  "PAYMENT_REJECTED",   // guest: payment rejected
 ];
 
 const notificationSchema = new mongoose.Schema(
