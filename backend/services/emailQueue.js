@@ -1,27 +1,26 @@
 // backend/services/emailQueue.js
 // Lightweight async job queue — non-blocking, no external dependencies.
-// Uses setImmediate so email jobs run after the current I/O cycle completes,
-// keeping API responses fast while still processing emails reliably.
+// setImmediate defers execution past the current I/O cycle so API responses
+// are never held up by email delivery.
 //
 // ── Upgrading to Bull + Redis (production scale) ───────────────────────────
 // 1. npm install bull
 // 2. Set REDIS_URL in .env
-// 3. Replace this file with the Bull implementation below:
+// 3. Replace enqueue() with:
 //
 //   import Bull from "bull";
-//   const emailQueue = new Bull("hostel-finder:emails", process.env.REDIS_URL);
-//   emailQueue.process(4, async (job) => job.data.fn()); // 4 concurrent workers
-//   emailQueue.on("failed", (job, err) =>
-//     console.error("[emailQueue] failed:", err.message));
-//   export const enqueue = (fn) => emailQueue.add({ fn }, { attempts: 3, backoff: 5000 });
+//   const q = new Bull("hostel-finder:emails", process.env.REDIS_URL);
+//   q.process(4, async (job) => job.data.fn());
+//   q.on("failed", (job, err) => console.error("[emailQueue] failed:", err.message, err.stack));
+//   export const enqueue = (fn) => q.add({ fn }, { attempts: 3, backoff: 5000 });
 // ──────────────────────────────────────────────────────────────────────────
 
 let pending = 0;
-const MAX_PENDING = 500; // safety cap — silent drop when overloaded
+const MAX_PENDING = 500;
 
 export const enqueue = (fn) => {
   if (pending >= MAX_PENDING) {
-    console.warn("[emailQueue] queue saturated — dropping job");
+    console.warn("[emailQueue] Queue saturated — dropping job (pending:", pending, ")");
     return;
   }
   pending++;
@@ -29,7 +28,9 @@ export const enqueue = (fn) => {
     try {
       await fn();
     } catch (err) {
-      console.error("[emailQueue] job error:", err.message);
+      // Log the full error — message alone hides the root cause
+      console.error("[emailQueue] ❌ Job failed:", err.message);
+      if (err.stack) console.error("[emailQueue]    Stack:", err.stack);
     } finally {
       pending--;
     }

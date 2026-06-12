@@ -1,8 +1,8 @@
 // backend/services/emailService.js
 // Orchestrates email delivery for every notification type.
-// Controllers and the notification service call only scheduleEmail() /
-// scheduleMessageEmail() — everything else (templates, prefs, anti-spam) is
-// handled internally.
+// Only scheduleEmail() and scheduleMessageEmail() are public.
+// All decisions (user prefs, anti-spam, rendering) happen here — controllers
+// and notificationService call these two functions and nothing else.
 
 import User         from "../models/User.js";
 import Notification from "../models/Notification.js";
@@ -24,70 +24,119 @@ const PREF_CATEGORY = {
   NEW_MESSAGE:       "messages",
 };
 
-// ── Check user preference for a notification type ─────────────────────────────
+// ── Preference check ──────────────────────────────────────────────────────────
 const isEnabled = (user, type) => {
   const category = PREF_CATEGORY[type];
   if (!category) return false;
-  return user.emailNotifications?.[category] !== false; // default: true
+  // emailNotifications may not exist on legacy users — treat as enabled
+  return user.emailNotifications?.[category] !== false;
 };
 
-// ── Render and send one email ─────────────────────────────────────────────────
+// ── Core render + send ────────────────────────────────────────────────────────
 const deliver = async (receiverEmail, type, data) => {
   const templateFn = TEMPLATES[type];
   if (!templateFn) {
-    console.warn(`[emailService] no template registered for type: ${type}`);
-    return;
+    // Throw so the queue logs this as a real failure
+    throw new Error(`No email template registered for notification type: "${type}"`);
   }
   const payload = templateFn(data);
   const html    = renderEmail(payload);
+  // sendMail now throws on Mailjet failure — error propagates to queue try/catch
   await transporter.sendMail({ to: receiverEmail, subject: payload.subject, html });
 };
 
-// ── Chat email cooldown ───────────────────────────────────────────────────────
+// ── Anti-spam cooldown for messages ──────────────────────────────────────────
 const MSG_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
-// ── Public: schedule email for a standard notification ───────────────────────
-// Called from notificationService.notify() — fire-and-forget, never throws.
+// ── scheduleEmail — standard notifications ────────────────────────────────────
 export const scheduleEmail = (type, receiverId, data) => {
   enqueue(async () => {
+    console.log(`[email] ▶ ${type} | receiver: ${receiverId}`);
+
+    // 1. Look up receiver
     const user = await User.findById(receiverId)
       .select("name email emailNotifications")
       .lean();
 
-    if (!user?.email)         return;
-    if (!isEnabled(user, type)) return;
+    if (!user) {
+      console.warn(`[email] ✗ ${type}: receiver not found (${receiverId})`);
+      return;
+    }
+    if (!user.email) {
+      console.warn(`[email] ✗ ${type}: receiver has no email address (${receiverId})`);
+      return;
+    }
 
+    // 2. Check user preference
+    if (!isEnabled(user, type)) {
+      const cat = PREF_CATEGORY[type];
+      console.log(`[email] ✗ ${type}: blocked — user disabled "${cat}" emails (${user.email})`);
+      return;
+    }
+
+    // 3. Deliver
+    console.log(`[email] → Delivering ${type} to ${user.email}`);
     await deliver(user.email, type, { userName: user.name, ...data });
+    console.log(`[email] ✓ ${type} delivered to ${user.email}`);
   });
 };
 
-// ── Public: schedule aggregated message digest (anti-spam) ───────────────────
-// Called from notificationService.notifyNewMessage() — fire-and-forget, never throws.
+// ── scheduleMessageEmail — anti-spam chat digest ──────────────────────────────
 export const scheduleMessageEmail = (receiverId, senderName, notification) => {
   enqueue(async () => {
+    console.log(`[email] ▶ NEW_MESSAGE digest | receiver: ${receiverId} | sender: ${senderName}`);
+
+    // 1. Look up receiver
     const user = await User.findById(receiverId)
       .select("name email emailNotifications isOnline")
       .lean();
 
-    if (!user?.email)                      return;
-    if (!isEnabled(user, "NEW_MESSAGE"))   return;
-    if (user.isOnline)                     return; // active — skip entirely
+    if (!user) {
+      console.warn(`[email] ✗ NEW_MESSAGE: receiver not found (${receiverId})`);
+      return;
+    }
+    if (!user.email) {
+      console.warn(`[email] ✗ NEW_MESSAGE: receiver has no email (${receiverId})`);
+      return;
+    }
 
-    // Cooldown: only one email per conversation per window
+    // 2. User preference
+    if (!isEnabled(user, "NEW_MESSAGE")) {
+      console.log(`[email] ✗ NEW_MESSAGE: user disabled message emails (${user.email})`);
+      return;
+    }
+
+    // 3. Online check — active users don't need email
+    if (user.isOnline) {
+      console.log(`[email] ✗ NEW_MESSAGE: user is online, skipping digest (${user.email})`);
+      return;
+    }
+
+    // 4. Cooldown check
     const lastSent = notification.metadata?.lastEmailSentAt;
-    if (lastSent && Date.now() - new Date(lastSent).getTime() < MSG_COOLDOWN_MS) return;
+    if (lastSent) {
+      const elapsed = Date.now() - new Date(lastSent).getTime();
+      if (elapsed < MSG_COOLDOWN_MS) {
+        const remaining = Math.round((MSG_COOLDOWN_MS - elapsed) / 1000);
+        console.log(`[email] ✗ NEW_MESSAGE: cooldown active (${remaining}s left) for ${user.email}`);
+        return;
+      }
+    }
 
+    // 5. Deliver digest
     const count = notification.metadata?.count || 1;
     const link  = `${process.env.CLIENT_URL || ""}${notification.link || "/user/chat"}`;
 
+    console.log(`[email] → Delivering NEW_MESSAGE digest (${count} msg) to ${user.email}`);
     await deliver(user.email, "NEW_MESSAGE", {
       userName:         user.name,
       senderName,
       count,
       conversationLink: link,
     });
+    console.log(`[email] ✓ NEW_MESSAGE digest delivered to ${user.email}`);
 
-    // Persist cooldown timestamp so subsequent calls respect the window
+    // 6. Persist cooldown timestamp
     await Notification.findByIdAndUpdate(notification._id, {
       $set: { "metadata.lastEmailSentAt": new Date() },
     });

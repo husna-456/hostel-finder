@@ -21,6 +21,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import siteContentRoutes from "./routes/siteContentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import debugRoutes from "./routes/debugRoutes.js";
 
 const app = express();
 
@@ -72,6 +73,8 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/site-content", siteContentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/debug", debugRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
