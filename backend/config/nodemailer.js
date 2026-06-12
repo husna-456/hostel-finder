@@ -27,9 +27,6 @@ const transporter = {
           To: toAddress,
           Subject: subject,
           HTMLPart: html,
-          Headers: {
-            "X-Mailjet-Campaign": "hostel-finder-transactional",
-          },
         },
       ],
     });
