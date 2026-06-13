@@ -190,15 +190,23 @@ export default function HostelDetails({ userPanel = false }) {
         </button>
 
         {/* Mobile: horizontal scroll strip */}
-        <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory h-60 scroll-smooth">
-          {allImages.length > 0 ? allImages.map((img, i) => (
-            <div key={i} className="shrink-0 w-full h-full snap-start cursor-pointer relative overflow-hidden"
-              onClick={() => setLightbox({ images: allImages, startIndex: i })}>
-              <img src={img} alt="" className="w-full h-full object-cover" />
-            </div>
-          )) : (
-            <div className="shrink-0 w-full h-full flex items-center justify-center bg-gray-800">
-              <BedDouble size={48} className="text-gray-600" />
+        <div className="md:hidden relative">
+          <div className="flex overflow-x-auto snap-x snap-mandatory h-72 scroll-smooth" style={{ scrollbarWidth: "none" }}>
+            {allImages.length > 0 ? allImages.map((img, i) => (
+              <div key={i} className="shrink-0 w-full h-full snap-start cursor-pointer relative overflow-hidden"
+                onClick={() => setLightbox({ images: allImages, startIndex: i })}>
+                <img src={img} alt={`${hostel.name} — photo ${i + 1}`} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+              </div>
+            )) : (
+              <div className="shrink-0 w-full h-full flex items-center justify-center bg-gray-800">
+                <BedDouble size={48} className="text-gray-600" />
+              </div>
+            )}
+          </div>
+          {allImages.length > 1 && (
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+              <Images size={11} /> {allImages.length} photos
             </div>
           )}
         </div>
@@ -216,12 +224,14 @@ export default function HostelDetails({ userPanel = false }) {
                 <BedDouble size={64} className="text-gray-600" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-            <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                <Images size={13} /> View all {allImages.length} photos
-              </span>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+            {allImages.length > 0 && (
+              <div className="absolute bottom-4 right-4">
+                <span className="bg-white/90 hover:bg-white backdrop-blur-sm text-gray-800 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg transition-colors">
+                  <Images size={13} className="text-purple-600" /> View all {allImages.length} photos
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 2×2 thumbnails */}
@@ -234,7 +244,7 @@ export default function HostelDetails({ userPanel = false }) {
                   onClick={() => setLightbox({ images: allImages, startIndex: Math.min(i, allImages.length - 1) })}>
                   {img ? (
                     <>
-                      <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={img} alt={`${hostel.name} — photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                     </>
                   ) : (
@@ -256,36 +266,45 @@ export default function HostelDetails({ userPanel = false }) {
 
       {/* ═══════════════════════════ HEADER + TABS ════════════════════════════ */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-6">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
 
             {/* Left */}
             <div className="flex-1 min-w-0">
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <div className="flex flex-wrap items-center gap-2 mb-2">
+                {/* Badge row */}
+                <div className="flex flex-wrap items-center gap-2 mb-2.5">
                   <TypeBadge type={hostel.type} />
                   {hostel.rating && (
-                    <span className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
-                      <Star size={14} fill="currentColor" /> {hostel.rating}
+                    <span className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-600 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                      <Star size={11} fill="currentColor" /> {hostel.rating}
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight mb-2">{hostel.name}</h1>
-                <p className="flex items-center gap-1.5 text-gray-500 text-sm">
-                  <MapPin size={14} className="text-purple-500 shrink-0" />{hostel.address}
-                </p>
+
+                {/* Title */}
+                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight mb-2.5">
+                  {hostel.name}
+                </h1>
+
+                {/* Location — icon aligns to first text line on long addresses */}
+                <div className="flex items-start gap-2 text-gray-500 text-sm mb-1">
+                  <MapPin size={15} className="text-purple-500 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed break-words">{hostel.address}</span>
+                </div>
               </motion.div>
 
-              {/* Quick stats */}
-              <div className="flex flex-wrap gap-4 mt-3">
+              {/* Quick stats — pill chips */}
+              <div className="flex flex-wrap gap-2 mt-4">
                 {[
                   { Icon: Building2,   label: "Floors", value: floors.length || "—"  },
                   { Icon: BedDouble,   label: "Rooms",  value: totalRooms || "—"     },
                   { Icon: CheckCircle, label: "Status", value: hostel.isBlocked ? "Unavailable" : "Available", green: !hostel.isBlocked },
                   ...(hostel.rating ? [{ Icon: Star, label: "Rating", value: `${hostel.rating}/5` }] : []),
                 ].map(s => (
-                  <div key={s.label} className="flex items-center gap-1.5 text-sm">
-                    <s.Icon size={14} className={s.green ? "text-green-500" : "text-purple-500"} />
+                  <div key={s.label}
+                    className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-3 py-1 text-xs">
+                    <s.Icon size={12} className={s.green ? "text-green-500" : "text-purple-500"} />
                     <span className="text-gray-400">{s.label}:</span>
                     <span className={`font-semibold ${s.green ? "text-green-700" : "text-gray-800"}`}>{s.value}</span>
                   </div>
@@ -410,7 +429,7 @@ export default function HostelDetails({ userPanel = false }) {
                               onClick={() => imgs && setLightbox({ images: imgs, startIndex: 0 })}>
                               {imgs ? (
                                 <>
-                                  <img src={imgs[0]} alt={room.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                  <img src={imgs[0]} alt={room.title || `Room ${ri + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                                   {imgs.length > 1 && (
                                     <div className="absolute bottom-2 right-2 bg-black/55 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
@@ -597,7 +616,7 @@ export default function HostelDetails({ userPanel = false }) {
                   onClick={() => navigate(userPanel ? `/user/hostel-listing/${h._id}` : `/hostels/${h._id}`)}>
                   <div className="h-32 relative overflow-hidden">
                     {h.images?.[0] ? (
-                      <img src={h.images[0]} alt={h.name} className="w-full h-full object-cover" />
+                      <img src={h.images[0]} alt={h.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center"><BedDouble size={28} className="text-gray-400" /></div>
                     )}
