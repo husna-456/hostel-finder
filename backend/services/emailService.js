@@ -7,7 +7,7 @@
 import User         from "../models/User.js";
 import Notification from "../models/Notification.js";
 import transporter  from "../config/nodemailer.js";
-import { renderEmail, renderTextEmail } from "../email/layout.js";
+import { renderTextEmail } from "../email/layout.js";
 import { TEMPLATES }   from "../email/templates.js";
 import { enqueue }     from "./emailQueue.js";
 
@@ -33,15 +33,32 @@ const isEnabled = (user, type) => {
 };
 
 // ── Core render + send ────────────────────────────────────────────────────────
+// Sends text-only emails: no HTML, no tracking pixels, no heavy markup.
+// Text-only messages score better with spam filters when sent via a shared
+// sender domain (onboarding@resend.dev) where domain reputation is pooled.
 const deliver = async (receiverEmail, type, data) => {
   const templateFn = TEMPLATES[type];
   if (!templateFn) {
     throw new Error(`No email template registered for notification type: "${type}"`);
   }
+
   const payload = templateFn(data);
-  const html    = renderEmail(payload);
-  const text    = renderTextEmail(payload); // plain-text companion — required for inbox delivery
-  await transporter.sendMail({ to: receiverEmail, subject: payload.subject, html, text });
+  const text    = renderTextEmail(payload);
+
+  const logMeta = {
+    to:        receiverEmail,
+    subject:   payload.subject,
+    type,
+    timestamp: new Date().toISOString(),
+  };
+
+  const result = await transporter.sendMail({
+    to:      receiverEmail,
+    subject: payload.subject,
+    text,
+  });
+
+  console.log(`[email] delivered`, { ...logMeta, id: result?.id });
 };
 
 // ── Anti-spam cooldown for messages ──────────────────────────────────────────
@@ -74,9 +91,7 @@ export const scheduleEmail = (type, receiverId, data) => {
     }
 
     // 3. Deliver
-    console.log(`[email] → Delivering ${type} to ${user.email}`);
     await deliver(user.email, type, { userName: user.name, ...data });
-    console.log(`[email] ✓ ${type} delivered to ${user.email}`);
   });
 };
 
@@ -126,14 +141,12 @@ export const scheduleMessageEmail = (receiverId, senderName, notification) => {
     const count = notification.metadata?.count || 1;
     const link  = `${process.env.CLIENT_URL || ""}${notification.link || "/user/chat"}`;
 
-    console.log(`[email] → Delivering NEW_MESSAGE digest (${count} msg) to ${user.email}`);
     await deliver(user.email, "NEW_MESSAGE", {
       userName:         user.name,
       senderName,
       count,
       conversationLink: link,
     });
-    console.log(`[email] ✓ NEW_MESSAGE digest delivered to ${user.email}`);
 
     // 6. Persist cooldown timestamp
     await Notification.findByIdAndUpdate(notification._id, {

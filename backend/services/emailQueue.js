@@ -1,38 +1,42 @@
 // backend/services/emailQueue.js
-// Lightweight async job queue — non-blocking, no external dependencies.
-// setImmediate defers execution past the current I/O cycle so API responses
-// are never held up by email delivery.
-//
-// ── Upgrading to Bull + Redis (production scale) ───────────────────────────
-// 1. npm install bull
-// 2. Set REDIS_URL in .env
-// 3. Replace enqueue() with:
-//
-//   import Bull from "bull";
-//   const q = new Bull("hostel-finder:emails", process.env.REDIS_URL);
-//   q.process(4, async (job) => job.data.fn());
-//   q.on("failed", (job, err) => console.error("[emailQueue] failed:", err.message, err.stack));
-//   export const enqueue = (fn) => q.add({ fn }, { attempts: 3, backoff: 5000 });
-// ──────────────────────────────────────────────────────────────────────────
+// Sequential email queue with rate limiting.
+// Fires one job at a time; waits SEND_DELAY_MS after each delivery before
+// starting the next — keeps burst volume low and avoids triggering spam
+// filters when multiple events fire close together (e.g. bulk bookings).
 
-let pending = 0;
-const MAX_PENDING = 500;
+const SEND_DELAY_MS = 1500; // 1.5 s between sends
+const MAX_QUEUED    = 500;
 
-export const enqueue = (fn) => {
-  if (pending >= MAX_PENDING) {
-    console.warn("[emailQueue] Queue saturated — dropping job (pending:", pending, ")");
-    return;
-  }
-  pending++;
+const queue  = [];
+let   active = false;
+
+const processNext = () => {
+  if (active || queue.length === 0) return;
+  active = true;
+
+  const fn = queue.shift();
   setImmediate(async () => {
     try {
       await fn();
     } catch (err) {
-      // Log the full error — message alone hides the root cause
       console.error("[emailQueue] ❌ Job failed:", err.message);
       if (err.stack) console.error("[emailQueue]    Stack:", err.stack);
     } finally {
-      pending--;
+      active = false;
+      if (queue.length > 0) {
+        setTimeout(processNext, SEND_DELAY_MS);
+      }
     }
   });
 };
+
+export const enqueue = (fn) => {
+  if (queue.length >= MAX_QUEUED) {
+    console.warn(`[emailQueue] Saturated — dropping job (${queue.length} queued)`);
+    return;
+  }
+  queue.push(fn);
+  processNext();
+};
+
+export const queueDepth = () => queue.length;

@@ -39,8 +39,8 @@ const transporter = {
       to:       toList,
       reply_to: replyTo,
       subject,
-      html,
-      text,   // plain-text companion — required for good spam scoring
+      text,
+      ...(html ? { html } : {}), // omit HTML for text-only sends
     });
 
     if (error) {
