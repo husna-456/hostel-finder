@@ -19,8 +19,8 @@ const getTransporter = async () => {
     });
 
     // Verify SMTP connection once
-    await transporter.verify();
-    console.log("✅ [mailer] Gmail SMTP connected successfully");
+    //await transporter.verify();
+    //console.log("✅ [mailer] Gmail SMTP connected successfully");
   }
 
   return transporter;
