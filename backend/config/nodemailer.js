@@ -17,7 +17,7 @@ console.log(
 console.log("Creating transporter...");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587, // Agar issue aaye to 465 bhi try kar sakti ho
+  port: 465, // Agar issue aaye to 465 bhi try kar sakti ho
   secure: false,
   requireTLS: true,
   auth: {
