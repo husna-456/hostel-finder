@@ -1,18 +1,22 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+
 import nodemailer from "nodemailer";
 
-let transporter = null;
+if (!process.env.EMAIL || !process.env.EMAIL_PASSWORD) {
+  console.warn("⚠️ EMAIL or EMAIL_PASSWORD is not set.");
+}
 
-const getTransporter = async () => {
-  if (!process.env.EMAIL || !process.env.EMAIL_PASSWORD) {
-    throw new Error(
-      "EMAIL or EMAIL_PASSWORD is not set. Add them to Railway environment variables."
-    );
-  }
+console.log("EMAIL:", process.env.EMAIL);
+console.log(
+  "EMAIL_PASSWORD:",
+  process.env.EMAIL_PASSWORD ? "FOUND" : "MISSING"
+);
 
-  if (!transporter) {
-   transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
+  port: 587, // Agar issue aaye to 465 bhi try kar sakti ho
   secure: false,
   requireTLS: true,
   auth: {
@@ -24,42 +28,13 @@ const getTransporter = async () => {
   socketTimeout: 60000,
 });
 
-    // Verify SMTP connection once
-    //await transporter.verify();
-    //console.log("✅ [mailer] Gmail SMTP connected successfully");
+// Verify SMTP on startup (optional)
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ SMTP Verify Error:", error);
+  } else {
+    console.log("✅ Gmail SMTP connected successfully");
   }
+});
 
-  return transporter;
-};
-
-const mailer = {
-  sendMail: async ({ to, subject, html, text }) => {
-    const smtp = await getTransporter();
-
-    const mailOptions = {
-      from: `"Hostel Finder" <${process.env.EMAIL}>`,
-      to,
-      subject,
-      text,
-      ...(html ? { html } : {}),
-    };
-
-    console.log(`[mailer] → Sending "${subject}" to ${to}`);
-
-    const info = await smtp.sendMail(mailOptions);
-
-    console.log(
-      `✅ [mailer] Email sent to ${to} | Message ID: ${info.messageId}`
-    );
-
-    return info;
-  },
-};
-
-console.log(
-  process.env.EMAIL && process.env.EMAIL_PASSWORD
-    ? `✅ [mailer] Gmail ready: ${process.env.EMAIL}`
-    : "⚠️ [mailer] EMAIL or EMAIL_PASSWORD missing"
-);
-
-export default mailer;
+export default transporter;
