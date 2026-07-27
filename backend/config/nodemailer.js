@@ -29,14 +29,18 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 60000,
 });
 
-// Verify SMTP on startup (optional)
+console.log("Before verify");
+
 transporter.verify((error, success) => {
-  console.log("Verifying SMTP...");
+  console.log("Inside verify callback");
+
   if (error) {
-    console.error("❌ SMTP Verify Error:", error);
+    console.error(error);
   } else {
-    console.log("✅ Gmail SMTP connected successfully");
+    console.log("SMTP Connected");
   }
 });
+
+console.log("After verify");
 
 export default transporter;
