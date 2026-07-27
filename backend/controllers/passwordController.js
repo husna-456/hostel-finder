@@ -6,12 +6,17 @@ import transporter from "../config/nodemailer.js";
 
 // Send password reset email
 export const sendPasswordLink = async (req, res) => {
+    console.log("✅ Route Hit");
+
   const { email } = req.body;
+    console.log("📧 Email:", email);
   if (!email) return res.status(400).json({ message: "Enter your email" });
 
   try {
+       console.log("1");
     // Find user by email
     const user = await User.findOne({ email });
+        console.log("2");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Generate a secure random token (32 bytes → hex string)
