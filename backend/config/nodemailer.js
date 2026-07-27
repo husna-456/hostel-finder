@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+console.log("🚀 NODEMAILER FILE LOADED");
 
 
 import nodemailer from "nodemailer";
@@ -13,7 +14,7 @@ console.log(
   "EMAIL_PASSWORD:",
   process.env.EMAIL_PASSWORD ? "FOUND" : "MISSING"
 );
-
+console.log("Creating transporter...");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587, // Agar issue aaye to 465 bhi try kar sakti ho
@@ -30,6 +31,7 @@ const transporter = nodemailer.createTransport({
 
 // Verify SMTP on startup (optional)
 transporter.verify((error, success) => {
+  console.log("Verifying SMTP...");
   if (error) {
     console.error("❌ SMTP Verify Error:", error);
   } else {
