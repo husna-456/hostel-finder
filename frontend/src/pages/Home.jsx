@@ -15,7 +15,7 @@ import {
   CalendarCheck,
   Star,
   ArrowRight,
-  Send,
+  LogIn,
   CheckCircle2,
   Building2,
   Users,
@@ -147,17 +147,10 @@ const WHY_US = [
   },
 ];
 
-const CHAT_MESSAGES = [
-  { from: "bot", text: "Hi! How can I help you find a hostel? What's your preferred location?" },
-  { from: "user", text: "I'm looking for girls hostel near NUST. Any options?" },
-  { from: "bot", text: "Found 4 great options! Fatima Jinnah Girls Hostel is closest. Want to see details?" },
-];
-
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function Home() {
-  const { role } = useAuth();
+  const { role, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [chatInput, setChatInput] = useState("");
   const [email, setEmail] = useState("");
   const [featuredHostels, setFeaturedHostels] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -192,9 +185,11 @@ export default function Home() {
 
   const handleListHostel = () => navigate("/login");
 
-  const handleChatSend = () => {
-    if (chatInput.trim()) setChatInput("");
-    navigate("/contact");
+  const handleChatCTA = () => {
+    if (!isAuthenticated) { navigate("/login"); return; }
+    if (role === "hostel_owner") navigate("/hostel_owner/chat");
+    else if (role === "admin") navigate("/admin/chats");
+    else navigate("/user/chat");
   };
 
   const handleSubscribe = async (e) => {
@@ -483,73 +478,29 @@ export default function Home() {
             </div>
           </Reveal>
 
-          {/* Chat widget */}
+          {/* Chat CTA — routes into the real chat system instead of a fake demo */}
           <Reveal dir="right" delay={0.15}>
             <motion.div
               whileHover={{ scale: 1.01 }}
-              className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl"
+              className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl p-8 md:p-10 text-center flex flex-col items-center"
             >
-              <div className="bg-gradient-to-r from-purple-700 to-violet-800 px-6 py-4 flex items-center gap-3">
-                <motion.div
-                  animate={{ rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, repeatDelay: 3 }}
-                  className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-white font-extrabold"
-                >
-                  HF
-                </motion.div>
-                <div>
-                  <p className="text-white font-bold">Chat System</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <motion.div
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="w-2 h-2 bg-green-400 rounded-full"
-                    />
-                    <p className="text-purple-200 text-xs">Always Online</p>
-                  </div>
-                </div>
+              <div className="w-16 h-16 bg-purple-600/20 border border-purple-500/30 rounded-2xl flex items-center justify-center mb-6">
+                <MessageCircle size={28} className="text-purple-400" />
               </div>
-
-              <div className="p-6 space-y-4 h-56 overflow-y-auto bg-gray-900/50">
-                {CHAT_MESSAGES.map((m, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.2 }}
-                    className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                      m.from === "user"
-                        ? "bg-purple-600 text-white rounded-br-sm"
-                        : "bg-gray-800 text-gray-200 rounded-bl-sm border border-gray-700"
-                    }`}>
-                      {m.text}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="px-6 pb-6 pt-4 bg-gray-900">
-                <div className="flex items-center gap-2 bg-gray-800 rounded-xl border border-gray-700 focus-within:border-purple-500 px-4 py-3 transition-all">
-                  <input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleChatSend(); }}
-                    placeholder="Type your message..."
-                    className="flex-1 text-sm text-gray-200 bg-transparent outline-none placeholder-gray-500"
-                  />
-                  <motion.button
-                    onClick={handleChatSend}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="w-9 h-9 bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
-                  >
-                    <Send size={15} className="text-white" />
-                  </motion.button>
-                </div>
-              </div>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-3 leading-tight">
+                Need Help Finding a Hostel?
+              </h3>
+              <p className="text-gray-400 leading-relaxed mb-8 max-w-sm">
+                Log in to access our real-time chat system and communicate with hostel owners and support.
+              </p>
+              <motion.button
+                onClick={handleChatCTA}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-7 py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-purple-900/40 w-full sm:w-auto"
+              >
+                <LogIn size={18} /> Login to Chat
+              </motion.button>
             </motion.div>
           </Reveal>
         </div>
