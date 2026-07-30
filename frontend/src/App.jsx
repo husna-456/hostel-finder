@@ -107,7 +107,7 @@ function App() {
     <CallProvider>
       {!hideNavbar && <Navbar />}
 
-      <div className={`min-h-screen bg-gray-50${!hideNavbar ? " pt-16" : ""}`}>
+      <div className={`min-h-screen bg-gray-50${!hideNavbar ? " pt-16 md:pt-18" : ""}`}>
         <Routes>
            {/* 🌐 Public Routes */}
           <Route

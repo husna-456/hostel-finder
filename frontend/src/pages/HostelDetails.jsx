@@ -212,9 +212,9 @@ export default function HostelDetails({ userPanel = false }) {
         </div>
 
         {/* Desktop: 60/40 split */}
-        <div className="hidden md:grid h-[500px]" style={{ gridTemplateColumns: "3fr 2fr", gap: "2px" }}>
+        <div className="hidden md:grid h-[500px] min-h-0" style={{ gridTemplateColumns: "3fr 2fr", gridTemplateRows: "1fr", gap: "2px" }}>
           {/* Main image */}
-          <div className="relative overflow-hidden cursor-pointer group"
+          <div className="relative overflow-hidden cursor-pointer group h-full min-h-0"
             onClick={() => setLightbox({ images: allImages.length > 0 ? allImages : [], startIndex: 0 })}>
             {allImages[0] ? (
               <img src={allImages[0]} alt={hostel.name}
@@ -235,12 +235,12 @@ export default function HostelDetails({ userPanel = false }) {
           </div>
 
           {/* 2×2 thumbnails */}
-          <div className="grid grid-cols-2 grid-rows-2 gap-0.5">
+          <div className="grid grid-cols-2 grid-rows-2 gap-0.5 h-full min-h-0">
             {[1, 2, 3, 4].map(i => {
               const img = allImages[i];
               const isLast = i === 4 && allImages.length > 5;
               return (
-                <div key={i} className="relative overflow-hidden cursor-pointer group"
+                <div key={i} className="relative overflow-hidden cursor-pointer group min-h-0"
                   onClick={() => setLightbox({ images: allImages, startIndex: Math.min(i, allImages.length - 1) })}>
                   {img ? (
                     <>
