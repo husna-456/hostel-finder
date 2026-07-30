@@ -1,14 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { fetchClient } from "../api/fetchClient";
-import { FaEdit, FaTrash, FaHome, FaBed, FaMapMarkerAlt, FaPlus } from "react-icons/fa";
+import { FaEdit, FaTrash, FaHome, FaBed, FaMapMarkerAlt, FaPlus, FaTimes, FaCloudUploadAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
+import { supabase } from "../lib/supabaseClient";
 
 const FACILITIES_OPTIONS = [
   "WiFi", "AC", "Laundry", "Parking", "Meals", "Security", "Generator", "Water",
   "Study Room", "CCTV", "Gym", "Cleaning",
 ];
+
+const MAX_HOSTEL_IMAGES = 6;
+
+// Turns a Supabase public URL back into the storage path so it can be removed
+function supabasePathFromUrl(url) {
+  const marker = "/object/public/hostel-images/";
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length);
+}
 
 function EditModal({ hostel, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -19,8 +29,11 @@ function EditModal({ hostel, onClose, onSaved }) {
     jazzCashNumber: hostel.jazzCashNumber || "",
     easypaisaNumber: hostel.easypaisaNumber || "",
     facilities: hostel.facilities || [],
+    images: hostel.images || [],
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const removedImagesRef = useRef([]); // URLs removed this session, deleted from storage on save
 
   const toggleFacility = (f) =>
     setForm((prev) => ({
@@ -29,6 +42,38 @@ function EditModal({ hostel, onClose, onSaved }) {
         ? prev.facilities.filter((x) => x !== f)
         : [...prev.facilities, f],
     }));
+
+  const handleAddImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ""; // allow re-selecting the same file later
+    if (files.length === 0) return;
+
+    if (form.images.length + files.length > MAX_HOSTEL_IMAGES) {
+      toast.warn(`You can upload a maximum of ${MAX_HOSTEL_IMAGES} images.`);
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      for (const file of files) {
+        const fileName = `hostels/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from("hostel-images").upload(fileName, file);
+        if (error) throw error;
+        const { data } = supabase.storage.from("hostel-images").getPublicUrl(fileName);
+        setForm((prev) => ({ ...prev, images: [...prev.images, data.publicUrl] }));
+      }
+      toast.success(files.length > 1 ? "Images uploaded!" : "Image uploaded!");
+    } catch (err) {
+      toast.error(err.message || "Failed to upload image");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (url) => {
+    setForm((prev) => ({ ...prev, images: prev.images.filter((img) => img !== url) }));
+    removedImagesRef.current.push(url);
+  };
 
   const handleSave = async () => {
     try {
@@ -39,6 +84,14 @@ function EditModal({ hostel, onClose, onSaved }) {
       });
       toast.success("Hostel updated!");
       onSaved({ ...hostel, ...form });
+
+      // Best-effort cleanup — DB is already the source of truth at this point
+      if (removedImagesRef.current.length > 0) {
+        const paths = removedImagesRef.current.map(supabasePathFromUrl).filter(Boolean);
+        if (paths.length > 0) {
+          supabase.storage.from("hostel-images").remove(paths).catch(() => {});
+        }
+      }
     } catch (err) {
       toast.error(err.message || "Failed to update hostel");
     } finally {
@@ -112,6 +165,54 @@ function EditModal({ hostel, onClose, onSaved }) {
           </div>
 
           <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Hostel Images ({form.images.length}/{MAX_HOSTEL_IMAGES})
+              </label>
+              <label
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
+                  uploadingImages || form.images.length >= MAX_HOSTEL_IMAGES
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                }`}
+              >
+                <FaCloudUploadAlt />
+                {uploadingImages ? "Uploading..." : "Add Images"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  disabled={uploadingImages || form.images.length >= MAX_HOSTEL_IMAGES}
+                  onChange={handleAddImages}
+                />
+              </label>
+            </div>
+
+            {form.images.length === 0 ? (
+              <p className="text-sm text-gray-400 border border-dashed border-gray-300 rounded-xl py-6 text-center">
+                No images yet — add at least one.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {form.images.map((url) => (
+                  <div key={url} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200">
+                    <img src={url} alt="Hostel" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(url)}
+                      title="Delete image"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <FaTimes size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Facilities</label>
             <div className="flex flex-wrap gap-2">
               {FACILITIES_OPTIONS.map((f) => (
@@ -141,7 +242,7 @@ function EditModal({ hostel, onClose, onSaved }) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || uploadingImages}
             className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Changes"}

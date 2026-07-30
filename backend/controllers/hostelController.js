@@ -36,6 +36,8 @@ export const createHostel = async (req, res) => {
       rooms = [],
       facilities = [],
       images = [],
+      jazzCashNumber = "",
+      easypaisaNumber = "",
     } = req.body;
 
 
@@ -103,6 +105,8 @@ export const createHostel = async (req, res) => {
       floors: floorsWithIds,
       rooms: roomsWithIds,
       images: savedImages,
+      jazzCashNumber,
+      easypaisaNumber,
       location: {
         type: "Point",
         coordinates: [lng, lat],
