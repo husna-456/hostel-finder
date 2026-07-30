@@ -1,10 +1,11 @@
 import SearchBox from "./SearchBox";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import { formatStatNumber } from "../utils/formatStat";
 
 const AREAS = ["Satellite Town", "Model Town", "G.T Road", "Peoples Colony", "Wapda Town", "Rahwali", "Canal Road", "Officer Colony", "Civil Lines", "Cantonment", "Defence Road", "Shaheenabad", "Gulshan Iqbal", "Nawan Pind"];
 
-export default function HeroSection({ onSearch, bannerImage }) {
+export default function HeroSection({ onSearch, bannerImage, stats }) {
   const bgImage = bannerImage || "/banner.jpg";
   const [cityIndex, setCityIndex] = useState(0);
 
@@ -89,20 +90,24 @@ export default function HeroSection({ onSearch, bannerImage }) {
               <SearchBox onSearch={onSearch} />
             </motion.div>
 
-            {/* Stats strip */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1 }}
-              className="flex items-center justify-center gap-5 md:gap-10 mt-10 flex-wrap"
-            >
-              {[["500+", "Hostels"], ["10K+", "Students Placed"], ["50+", "Cities Covered"]].map(([num, lbl]) => (
-                <div key={lbl} className="text-center">
-                  <p className="text-2xl font-extrabold text-white leading-none">{num}</p>
-                  <p className="text-white/45 text-xs mt-1 tracking-wide">{lbl}</p>
-                </div>
-              ))}
-            </motion.div>
+            {/* Stats strip — driven by the same admin-managed stats as the FAQ page */}
+            {stats?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.1 }}
+                className="flex items-center justify-center gap-5 md:gap-10 mt-10 flex-wrap"
+              >
+                {stats.map((s) => (
+                  <div key={s.label} className="text-center">
+                    <p className="text-2xl font-extrabold text-white leading-none">
+                      {formatStatNumber(s.value, s.suffix)}
+                    </p>
+                    <p className="text-white/45 text-xs mt-1 tracking-wide">{s.label}</p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
           </>
         ) : (
           <motion.div

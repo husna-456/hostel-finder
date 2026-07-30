@@ -1,9 +1,10 @@
 import HeroSection from "../components/HeroSection";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import { fetchClient } from "../api/fetchClient";
+import { formatStatNumber } from "../utils/formatStat";
 import {
   ShieldCheck,
   MapPin,
@@ -21,7 +22,13 @@ import {
   Globe,
   Plus,
   ChevronRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STAT_ICONS = { building: Building2, users: Users, map: Globe, star: Star };
 
 /* ─── Scroll reveal wrapper ─────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, dir = "up", className = "" }) {
@@ -146,21 +153,23 @@ const CHAT_MESSAGES = [
   { from: "bot", text: "Found 4 great options! Fatima Jinnah Girls Hostel is closest. Want to see details?" },
 ];
 
-const STATS = [
-  { Icon: Building2, num: "500+", label: "Hostels Listed" },
-  { Icon: Users, num: "10K+", label: "Students Placed" },
-  { Icon: Globe, num: "50+", label: "Cities Covered" },
-];
-
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function Home() {
   const { role } = useAuth();
+  const navigate = useNavigate();
   const [chatInput, setChatInput] = useState("");
   const [email, setEmail] = useState("");
   const [featuredHostels, setFeaturedHostels] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(true);
+
+  // Single source of truth for homepage/FAQ stats — managed from the Admin Panel
+  const [siteStats, setSiteStats] = useState(null);
+
+  // Newsletter subscribe state
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeStatus, setSubscribeStatus] = useState(null); // { type: 'success' | 'error', message }
 
   useEffect(() => {
     fetchClient("/hostels/featured")
@@ -172,9 +181,56 @@ export default function Home() {
       .then((data) => setReviews(Array.isArray(data) ? data : []))
       .catch(() => setReviews([]))
       .finally(() => setLoadingReviews(false));
+
+    fetch(`${BASE_URL}/site-content/facts`)
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((d) => setSiteStats(Array.isArray(d?.stats) ? d.stats : []))
+      .catch(() => setSiteStats([]));
   }, []);
 
   const handleSearch = (filters) => console.log(filters);
+
+  const handleListHostel = () => navigate("/login");
+
+  const handleChatSend = () => {
+    if (chatInput.trim()) setChatInput("");
+    navigate("/contact");
+  };
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+
+    if (!trimmed) {
+      setSubscribeStatus({ type: "error", message: "Please enter your email address." });
+      return;
+    }
+    if (!EMAIL_RE.test(trimmed)) {
+      setSubscribeStatus({ type: "error", message: "Please enter a valid email address." });
+      return;
+    }
+
+    setSubscribing(true);
+    setSubscribeStatus(null);
+    try {
+      const res = await fetch(`${BASE_URL}/newsletter/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubscribeStatus({ type: "error", message: data?.message || "Something went wrong. Please try again." });
+        return;
+      }
+      setSubscribeStatus({ type: "success", message: data?.message || "Subscribed successfully!" });
+      setEmail("");
+    } catch {
+      setSubscribeStatus({ type: "error", message: "Network error. Please try again." });
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   if (role === "hostel_owner") return <Navigate to="/hostel_owner/dashboard" replace />;
 
@@ -182,7 +238,7 @@ export default function Home() {
     <div className="min-h-screen bg-white overflow-x-hidden">
 
       {/* ═══════════════════════════════════════ HERO ══════════════════════ */}
-      <HeroSection onSearch={handleSearch} bannerImage="/banner.jpg" />
+      <HeroSection onSearch={handleSearch} bannerImage="/banner.jpg" stats={siteStats} />
 
       {/* ═══════════════════════════════ WHY CHOOSE US ═════════════════════ */}
       <section className="bg-gray-950 py-20 px-6">
@@ -480,10 +536,12 @@ export default function Home() {
                   <input
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleChatSend(); }}
                     placeholder="Type your message..."
                     className="flex-1 text-sm text-gray-200 bg-transparent outline-none placeholder-gray-500"
                   />
                   <motion.button
+                    onClick={handleChatSend}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     className="w-9 h-9 bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
@@ -499,18 +557,33 @@ export default function Home() {
 
       {/* ══════════════════════════ STATS STRIP ════════════════════════════ */}
       <section className="bg-purple-700 py-14 px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-          {STATS.map(({ Icon, num, label }, i) => (
-            <Reveal key={label} delay={i * 0.1}>
-              <motion.div whileHover={{ scale: 1.06 }} className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center">
-                  <Icon size={26} className="text-white" strokeWidth={1.7} />
-                </div>
-                <p className="text-white font-extrabold text-4xl leading-none">{num}</p>
-                <p className="text-purple-200 text-base font-medium">{label}</p>
-              </motion.div>
-            </Reveal>
-          ))}
+        <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-x-12 gap-y-8 text-center">
+          {siteStats === null ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-3 animate-pulse">
+                <div className="w-14 h-14 bg-white/15 rounded-2xl" />
+                <div className="h-9 w-20 bg-white/15 rounded" />
+                <div className="h-4 w-28 bg-white/10 rounded" />
+              </div>
+            ))
+          ) : (
+            siteStats.map((s, i) => {
+              const Icon = STAT_ICONS[s.icon] || Building2;
+              return (
+                <Reveal key={s.label} delay={i * 0.1}>
+                  <motion.div whileHover={{ scale: 1.06 }} className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center">
+                      <Icon size={26} className="text-white" strokeWidth={1.7} />
+                    </div>
+                    <p className="text-white font-extrabold text-4xl leading-none">
+                      {formatStatNumber(s.value, s.suffix)}
+                    </p>
+                    <p className="text-purple-200 text-base font-medium">{s.label}</p>
+                  </motion.div>
+                </Reveal>
+              );
+            })
+          )}
         </div>
       </section>
 
@@ -544,6 +617,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap gap-4">
                 <motion.button
+                  onClick={handleListHostel}
                   whileHover={{ scale: 1.05, boxShadow: "0 20px 45px rgba(124,58,237,0.45)" }}
                   whileTap={{ scale: 0.97 }}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-4 rounded-xl flex items-center gap-2.5 shadow-2xl shadow-purple-900/60 transition-all text-base"
@@ -551,6 +625,7 @@ export default function Home() {
                   <Plus size={20} /> List Your Hostel
                 </motion.button>
                 <motion.button
+                  onClick={() => navigate("/privacy-policy")}
                   whileHover={{ scale: 1.03, backgroundColor: "rgba(255,255,255,0.12)" }}
                   whileTap={{ scale: 0.97 }}
                   className="border-2 border-white/35 text-white font-semibold px-7 py-4 rounded-xl backdrop-blur-sm transition-all text-base flex items-center gap-2"
@@ -559,20 +634,18 @@ export default function Home() {
                 </motion.button>
               </div>
               <div className="flex flex-wrap gap-8 mt-10">
-                {[["500+", "Hostels Listed"], ["10k+", "Students Placed"], ["50+", "Cities"]].map(
-                  ([num, lbl], i) => (
-                    <motion.div
-                      key={lbl}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.1 }}
-                    >
-                      <p className="text-white font-extrabold text-3xl">{num}</p>
-                      <p className="text-white/45 text-sm mt-1">{lbl}</p>
-                    </motion.div>
-                  )
-                )}
+                {(siteStats || []).map((s, i) => (
+                  <motion.div
+                    key={s.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <p className="text-white font-extrabold text-3xl">{formatStatNumber(s.value, s.suffix)}</p>
+                    <p className="text-white/45 text-sm mt-1">{s.label}</p>
+                  </motion.div>
+                ))}
               </div>
             </Reveal>
           </div>
@@ -654,22 +727,48 @@ export default function Home() {
             <p className="text-purple-200 mb-10 text-lg">
               Get new hostel listings and exclusive deals in your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" noValidate>
               <input
+                type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (subscribeStatus) setSubscribeStatus(null); }}
                 placeholder="Enter your email address"
-                className="flex-1 bg-white/15 backdrop-blur-sm border border-white/25 text-white placeholder-white/50 rounded-xl px-5 py-3.5 text-base outline-none focus:border-white/60 transition-colors"
+                disabled={subscribing}
+                className="flex-1 bg-white/15 backdrop-blur-sm border border-white/25 text-white placeholder-white/50 rounded-xl px-5 py-3.5 text-base outline-none focus:border-white/60 transition-colors disabled:opacity-60"
               />
               <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                className="bg-white text-purple-700 font-bold px-7 py-3.5 rounded-xl hover:bg-purple-50 transition-colors text-base whitespace-nowrap shadow-xl flex items-center gap-2"
+                type="submit"
+                disabled={subscribing}
+                whileHover={{ scale: subscribing ? 1 : 1.04 }}
+                whileTap={{ scale: subscribing ? 1 : 0.97 }}
+                className="bg-white text-purple-700 font-bold px-7 py-3.5 rounded-xl hover:bg-purple-50 transition-colors text-base whitespace-nowrap shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Subscribe <ArrowRight size={16} />
+                {subscribing ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Subscribing...
+                  </>
+                ) : (
+                  <>
+                    Subscribe <ArrowRight size={16} />
+                  </>
+                )}
               </motion.button>
-            </div>
-            <p className="text-purple-300/60 text-sm mt-5">No spam. Unsubscribe anytime.</p>
+            </form>
+
+            {subscribeStatus ? (
+              <motion.p
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`text-sm mt-4 flex items-center justify-center gap-1.5 ${
+                  subscribeStatus.type === "success" ? "text-white font-semibold" : "text-red-200"
+                }`}
+              >
+                {subscribeStatus.type === "success" ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+                {subscribeStatus.message}
+              </motion.p>
+            ) : (
+              <p className="text-purple-300/60 text-sm mt-5">No spam. Unsubscribe anytime.</p>
+            )}
           </Reveal>
         </div>
       </section>
